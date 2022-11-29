@@ -3,13 +3,13 @@
 	"RANK"
 	{
 		"#format"		"{1:d}"
-		"en"			"Ваш ранг {olive}#{1}"
+		"ru"			"Ваш ранг {olive}#{1}{default}. Увидеть больше {olive}!rankstats"
 	}
 
 	"WITHOUT_RANK"
 	{
 		"#format"		"{1:.1f}"
-		"en"			"На данный момент у вас нет ранга. Неоходимо сыграть {olive}{1}ч"
+		"ru"			"На данный момент у вас нет ранга. Неоходимо сыграть {olive}{1}ч"
 	}
 
 	"RANKSTATS_BAD_ARG"

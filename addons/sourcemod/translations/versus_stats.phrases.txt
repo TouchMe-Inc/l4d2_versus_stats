@@ -3,7 +3,7 @@
 	"RANK"
 	{
 		"#format"		"{1:d}"
-		"en"			"Your rank {olive}#{1}"
+		"en"			"Your rank {olive}#{1}{default}. See more {olive}!rankstats"
 	}
 
 	"WITHOUT_RANK"

@@ -42,7 +42,7 @@
 	"TOP_ITEM"
 	{
 		"#format"		"{1:.1f},{2:.1f}"
-		"en"			"└ Played time: {1}h ∙ Efficiency: {2}"
+		"en"			"└ Played time: {1}h ∙ Rating: {2}pts"
 	}
 
 	"NOT_FOUND"
@@ -53,7 +53,7 @@
 	"RANKSTATS_TITLE"
 	{
 		"#format"		"{1:d},{2:s},{3:.1f},{4:.1f}"
-		"en"			"#{1}: {2}\nPlayed time: {3} ∙ Efficiency: {4}"
+		"en"			"#{1}: {2}\nRating: {4}pts ∙ Played time: {3}"
 	}
 
 	"CODE_STATS_0"

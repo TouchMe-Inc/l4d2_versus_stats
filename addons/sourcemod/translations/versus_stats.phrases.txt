@@ -42,7 +42,7 @@
 	"TOP_ITEM"
 	{
 		"#format"		"{1:.1f},{2:.1f}"
-		"en"			"└ Played time: {1}h ∙ Rating: {2}pts"
+		"en"			"└ Rating: {2}pts ∙ Played time: {1}h"
 	}
 
 	"NOT_FOUND"

@@ -986,7 +986,7 @@ void InitCmds()
 {
 	RegConsoleCmd("sm_top",		Cmd_ShowTop);
 	RegConsoleCmd("sm_rank",	Cmd_ShowRank);
-	RegConsoleCmd("sm_stats",	Cmd_ShowStats);
+	RegConsoleCmd("sm_rankstats",	Cmd_ShowRankStats);
 }
 
 public Action Cmd_ShowTop(int iClient, int iArgs)
@@ -1014,7 +1014,7 @@ public Action Cmd_ShowRank(int iClient, int iArgs)
 	return Plugin_Handled;
 }
 
-public Action Cmd_ShowStats(int iClient, int iArgs)
+public Action Cmd_ShowRankStats(int iClient, int iArgs)
 {
 	if (IS_VALID_CLIENT(iClient))
 	{

@@ -4,9 +4,9 @@ This plugin will add statistics of player actions in versus mode.
 ## Commands
 `!rank` - Show your rank
 
-`!stats` - Show your stats
+`!rankstats` - Show your stats
 
-`!stats <name|#userid>` - Show stats player
+`!rankstats <name|#userid>` - Show stats player
 
 `!top` - Show Top Players
 

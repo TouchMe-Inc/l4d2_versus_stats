@@ -1101,8 +1101,11 @@ void RankStats(int iClient, Player pViewPlayer, int iPage)
 
 	int iStart = iPage * PER_PAGE;
 	int iEnd = (iPage + 1) * PER_PAGE;
+	int iSpace = 0;
 
-	if (iEnd > CODE_STATS_SIZE) {
+	if (iEnd > CODE_STATS_SIZE)
+	{
+		iSpace = iEnd - CODE_STATS_SIZE;
 		iEnd = CODE_STATS_SIZE;
 	}
 
@@ -1112,6 +1115,11 @@ void RankStats(int iClient, Player pViewPlayer, int iPage)
 		Format(sPattern, sizeof(sPattern), "CODE_STATS_%d", iStats);
 		Format(sTemp, sizeof(sTemp), "%T", sPattern, iClient, pViewPlayer.stats[iStats]);
 		hPanel.DrawText(sTemp);
+	}
+	
+	for (int i = 0; i < iSpace; i++)
+	{
+		hPanel.DrawText(" ");
 	}
 
 	hPanel.DrawText(" ");

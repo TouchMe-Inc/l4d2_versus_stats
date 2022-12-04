@@ -21,9 +21,6 @@ Add new connection data to the `databases.cfg` file:
   ...
 ```
 
-## Support
-[ReadyUp](https://github.com/SirPlease/L4D2-Competitive-Rework/blob/master/addons/sourcemod/scripting/readyup.sp)
-
 ## Module vs_rankstats
 The plugin adds the ability to view the rank and statistics of the player.
 
@@ -35,5 +32,8 @@ The plugin adds the ability to view the rank and statistics of the player.
 `!rankstats <name|#userid>` - Show stats player
 
 ### What statistics will be displayed?
-`configs/vs_rankstats.ini` contains the [codestats](https://github.com/TouchMe-Inc/l4d2_versus_stats/blob/v2/addons/sourcemod/scripting/include/versus_stats.inc) of all items that will be displayed. 
+`configs/vs_rankstats.ini` contains the [codestats](https://github.com/TouchMe-Inc/l4d2_versus_stats/blob/v2/addons/sourcemod/scripting/include/versus_stats.inc) of all items that will be displayed.
+
+## Support
+[ReadyUp](https://github.com/SirPlease/L4D2-Competitive-Rework/blob/master/addons/sourcemod/scripting/readyup.sp)
 

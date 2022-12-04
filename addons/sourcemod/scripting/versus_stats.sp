@@ -466,8 +466,6 @@ public Action Timer_PlayerTeam(Handle hTimer)
 		}
 	}
 
-	g_bFullTeam = true;
-
 	return Plugin_Stop;
 }
 

@@ -8,8 +8,6 @@ This plugin will add statistics of player actions in versus mode.
 
 `!rankstats <name|#userid>` - Show stats player
 
-`!top` - Show Top Players
-
 ## Install
 Add new connection data to the `databases.cfg` file:
 ```

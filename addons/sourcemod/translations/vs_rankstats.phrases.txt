@@ -11,7 +11,12 @@
 		"#format"		"{1:.1f}"
 		"en"			"You currently do not have a rank. Need to play {olive}{1}h"
 	}
-
+	
+	"RANK_IN_PROGRESS"
+	{
+		"en"			"Ranking in progress"
+	}
+	
 	"RANKSTATS_BAD_ARG"
 	{
 		"#format"		"{1:s}"

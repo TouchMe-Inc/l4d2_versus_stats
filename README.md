@@ -24,7 +24,7 @@ Add new connection data to the `databases.cfg` file:
 ## Support
 [ReadyUp](https://github.com/SirPlease/L4D2-Competitive-Rework/blob/master/addons/sourcemod/scripting/readyup.sp)
 
-## About vs_rankstats
+## Module vs_rankstats
 The plugin adds the ability to view the rank and statistics of the player.
 
 ### Commands

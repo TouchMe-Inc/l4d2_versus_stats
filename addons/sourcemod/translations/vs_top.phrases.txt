@@ -1,0 +1,40 @@
+"Phrases"
+{
+
+	"TOP_BAD_ARG"
+	{
+		"#format"		"{1:s}"
+		"en"			"Bad offset \"{1}\". Use: {olive}!top [5|10|15|...]"
+	}
+
+	"TOP_EMPTY"
+	{
+		"en"			"There are no players in the top"
+	}
+
+	"NEXT"
+	{
+		"en"			"Next"
+	}
+
+	"BACK"
+	{
+		"en"			"Back"
+	}
+
+	"CLOSE"
+	{
+		"en"			"Close"
+	}
+
+	"TOP_TITLE"
+	{
+		"en"			"Top:"
+	}
+
+	"TOP_ITEM"
+	{
+		"#format"		"{1:2d},{2:s},{3:.1f},{4:.1f}"
+		"en"			"#{1}. {2} [{4}pts ∙ {3}h]"
+	}
+}

@@ -466,6 +466,8 @@ public Action Timer_PlayerTeam(Handle hTimer)
 		}
 	}
 
+	g_bFullTeam = true;
+
 	return Plugin_Stop;
 }
 
@@ -964,22 +966,6 @@ void StopPlayedTime()
 
 bool CanRecordStats() {
 	return g_bRoundIsLive && g_bFullTeam;
-}
-
-Database ConnectDatabase()
-{
-	char error[255];
-	Database db;
-	
-	if (SQL_CheckConfig(DATABASE)) {
-		db = SQL_Connect(DATABASE, true, error, sizeof(error));
-	}
-
-	if (db == null) {
-		LogError("Could not connect to database: %s", error);
-	}
-	
-	return db;
 }
 
 bool CheckDatabaseDriver(Database db) 

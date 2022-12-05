@@ -274,7 +274,7 @@ void RankStats(int iClient, int iTarget, int iPage)
 
 	char sTemp[128];
 
-	Format(sTemp, sizeof(sTemp), "%T", "RANKSTATS_TITLE", iClient, GetClientRank(iTarget), iClient, SecToHours(GetClientPlayedTime(iTarget)), GetClientRating(iTarget));
+	Format(sTemp, sizeof(sTemp), "%T", "RANKSTATS_TITLE", iClient, GetClientRank(iTarget), iTarget, SecToHours(GetClientPlayedTime(iTarget)), GetClientRating(iTarget));
 	hPanel.SetTitle(sTemp);
 	hPanel.DrawText(" ");
 

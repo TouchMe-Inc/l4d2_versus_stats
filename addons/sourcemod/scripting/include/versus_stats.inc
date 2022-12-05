@@ -109,6 +109,21 @@
 
 #define DATABASE                "versus_stats"
 
+stock Database ConnectDatabase()
+{
+	char error[255];
+	Database db;
+	
+	if (SQL_CheckConfig(DATABASE)) {
+		db = SQL_Connect(DATABASE, true, error, sizeof(error));
+	}
+
+	if (db == null) {
+		LogError("Could not connect to database: %s", error);
+	}
+	
+	return db;
+}
 
 native int GetClientRank(int iClient);
 

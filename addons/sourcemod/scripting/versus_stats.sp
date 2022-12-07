@@ -733,9 +733,9 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 			g_pPlayers[iKiller].AddStats(SURVIVOR_KILL, 1);
 
 			bool bHeadShot = event.GetBool("headshot");
-			
+
 			if (bHeadShot) {
-				g_pPlayers[iKiller].AddStats(iKillCode, 1);
+				g_pPlayers[iKiller].AddStats(SURVIVOR_K_SI_HS, 1);
 			}
 		}
 	}

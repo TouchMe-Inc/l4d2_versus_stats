@@ -74,7 +74,6 @@ public Plugin myinfo = {
 // Other
 #define HOUR                    3600
 #define LIB_VERSUS_STATS        "versus_stats"
-#define AUTO_EXEC_CONFIG        "versus_stats"
 
 // Macros
 #define IS_VALID_CLIENT(%1)     (%1 > 0 && %1 <= MaxClients)
@@ -813,8 +812,6 @@ void InitCvars()
 	g_hMinRankedHours = CreateConVar("vs_min_ranked_hours", "3.0", "Minimum number of hours to display player statistics", FCVAR_NOTIFY);
 	g_hMinRankedHours.AddChangeHook(OnMinRankedHoursChanged);
 	g_fMinRankedHours = g_hMinRankedHours.FloatValue;
-
-	AutoExecConfig(true, AUTO_EXEC_CONFIG);
 }
 
 /**

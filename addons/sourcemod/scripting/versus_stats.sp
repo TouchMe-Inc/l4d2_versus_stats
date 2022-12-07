@@ -1218,8 +1218,8 @@ float CalculateRating(Player pTargetPlayer)
 	}
 
 	// <> Magic number <>
-	float fPositive = float(pTargetPlayer.stats[SURVIVOR_KILL] + pTargetPlayer.stats[INFECTED_INCAPACITATE] * 4 + pTargetPlayer.stats[INFECTED_KILL] * 4);
-	float fNegative = float(pTargetPlayer.stats[SURVIVOR_DEATH] * 4 + pTargetPlayer.stats[SURVIVOR_INCAPACITATED] * 2 + pTargetPlayer.stats[SURVIVOR_TEAMKILL] * 4);
+	float fPositive = float(pTargetPlayer.stats[SURVIVOR_KILL] + pTargetPlayer.stats[INFECTED_INCAPACITATE] * 2 + pTargetPlayer.stats[INFECTED_KILL] * 6);
+	float fNegative = float(pTargetPlayer.stats[SURVIVOR_DEATH] * 4 + pTargetPlayer.stats[SURVIVOR_INCAPACITATED] * 2 + pTargetPlayer.stats[SURVIVOR_TEAMKILL] * 16);
 	float fRating = (fPositive - fNegative) / (fPlayedHours);
 
 	return fRating > 0.0 ? fRating : 0.0;

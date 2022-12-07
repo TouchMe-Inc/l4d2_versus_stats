@@ -1290,59 +1290,59 @@ int GetKillCodeByWeaponId(int iWeponId)
  */
 int GetKillCodeByMeleeName(const char[] sMeleeName) 
 {
-	if (StrEqual(sMeleeName, "katana", false)) {
+	if (sMeleeName[0] == 'k' && sMeleeName[1] == 'a') { // katana
 		return SURVIVOR_K_KATANA;
 	}
 
-	else if (StrEqual(sMeleeName, "fireaxe", false)) {
+	else if (sMeleeName[0] == 'f' && sMeleeName[1] == 'i') { // fireaxe
 		return SURVIVOR_K_AXE;
 	}
 	
-	else if (StrEqual(sMeleeName, "machete", false)) {
+	else if (sMeleeName[0] == 'm') { // machete
 		return SURVIVOR_K_MACHATE;
 	}
 
-	else if (StrEqual(sMeleeName, "knife", false)) {
+	else if (sMeleeName[0] == 'k') { // knife
 		return SURVIVOR_K_KNIFE;
 	}
 
-	else if (StrEqual(sMeleeName, "chainsaw", false)) {
+	else if (sMeleeName[0] == 'c' && sMeleeName[1] == 'h') { // chainsaw
 		return SURVIVOR_K_SAW;
 	}
 	
-	else if (StrEqual(sMeleeName, "pitchfork", false)) {
+	else if (sMeleeName[0] == 'p') { // pitchfork
 		return SURVIVOR_K_PITCHFORK;
 	}
 	
-	else if (StrEqual(sMeleeName, "shovel", false)) {
+	else if (sMeleeName[0] == 's') { // shovel
 		return SURVIVOR_K_SHOVEL;
 	}
 
-	else if (StrEqual(sMeleeName, "golfclub", false)) {
+	else if (sMeleeName[0] == 'g') { // golfclub
 		return SURVIVOR_K_GOLF;
 	}
 
-	else if (StrEqual(sMeleeName, "electric_guitar", false)) {
+	else if (sMeleeName[0] == 'e') { // electric_guitar
 		return SURVIVOR_K_GUITAR;
 	}
 
-	else if (StrEqual(sMeleeName, "tonfa", false)) {
+	else if (sMeleeName[0] == 't') { // tonfa
 		return SURVIVOR_K_TONFA;
 	}
 
-	else if (StrEqual(sMeleeName, "baseball_bat", false)) {
+	else if (sMeleeName[0] == 'b') { // baseball_bat
 		return SURVIVOR_K_BASEBALL;
 	}
 
-	else if (StrEqual(sMeleeName, "cricket_bat", false)) {
+	else if (sMeleeName[0] == 'c' && sMeleeName[2] == 'i') { // cricket_bat
 		return SURVIVOR_K_CRICKET;
 	}
 
-	else if (StrEqual(sMeleeName, "frying_pan", false)) {
+	else if (sMeleeName[0] == 'f') { // frying_pan
 		return SURVIVOR_K_PAN;
 	}
 
-	else if (StrEqual(sMeleeName, "crowbar", false)) {
+	else if (sMeleeName[0] == 'c') { // crowbar
 		return SURVIVOR_K_CROWBAR;
 	}
 

@@ -24,6 +24,8 @@ public Plugin myinfo = {
 #define HOUR                    3600
 #define TRANSLATIONS            "vs_top.phrases"
 
+// Macros
+#define IS_VALID_CLIENT(%1)     (%1 > 0 && %1 <= MaxClients)
 
 enum struct Player
 {

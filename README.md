@@ -1,10 +1,11 @@
 # About versus_stats
 This plugin will add statistics of player actions in versus mode.
 
-## Cvars
-`vs_max_last_visit 2592000` - The maximum time since the last visit that a record will be found in the database.
-
-`vs_min_ranked_hours 3.0` - Minimum number of hours to display player statistics.
+## ConVars
+| ConVar               | Value         | Description                                                                        |
+| -------------------- | ------------- | ---------------------------------------------------------------------------------- |
+| vs_max_last_visit    | 2592000       | The maximum time since the last visit that a record will be found in the database. |
+| vs_min_ranked_hours  | 3.0           | Minimum number of hours to display player statistics.                              |
 
 ## Install
 Add new connection data to the `databases.cfg` file:

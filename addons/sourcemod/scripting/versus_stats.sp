@@ -7,28 +7,26 @@
 
 #undef REQUIRE_PLUGIN
 #include <readyup>
-#define LIB_READY              "readyup"
+#define LIB_READY               "readyup"
+
+#include "include/versus_stats.inc"
 
 
 public Plugin myinfo = { 
 	name = "VersusStats",
 	author = "TouchMe",
 	description = "Versus mode statistics",
-	version = "1.0"
+	version = VERSUS_STATS_VERSION
 };
 
 
-#define AUTO_EXEC_CONFIG        "versus_stats"
-#define DATABASE                "versus_stats"
-#define TRANSLATIONS            "versus_stats.phrases"
-
-#define GAMEMODE_VERSUS         "versus"
-
+// Team
 #define TEAM_NONE               0
 #define TEAM_SPECTATOR          1
 #define TEAM_SURVIVOR           2
 #define TEAM_INFECTED           3
 
+// Zombie class
 #define ZC_SMOKER               1
 #define ZC_BOOMER               2
 #define ZC_HUNTER               3
@@ -38,21 +36,17 @@ public Plugin myinfo = {
 #define ZC_WITCH                7
 #define ZC_TANK                 8
 
+// SQL Fragment
 #define CREATE_CODE_STATS_TEMP         "code_stats_%d int(11) UNSIGNED NOT NULL DEFAULT 0,"
 #define CREATE_CODE_STATS_TEMP_SIZE    53
-
 #define UPDATE_CODE_STATS_TEMP         "`code_stats_%d`=%d,"
 #define UPDATE_CODE_STATS_TEMP_SIZE    30
-
 #define INSERT_CODE_STATS_COLUMN_TEMP  "code_stats_%d,"
 #define INSERT_CODE_STATS_COLUMN_TEMP_SIZE 16
+#define INSERT_CODE_STATS_VALUE_TEMP   "%d,"
+#define INSERT_CODE_STATS_VALUE_TEMP_SIZE 12
 
-#define INSERT_CODE_STATS_VALUE_TEMP  "%d,"
-#define INSERT_CODE_STATS_VALUE_TEMP_SIZE 11
-
-#define PER_PAGE                7
-#define HOUR                    3600
-
+// Weapon id
 #define WID_PISTOL              1
 #define WID_SMG                 2
 #define WID_PUMP                3
@@ -77,110 +71,11 @@ public Plugin myinfo = {
 #define WID_SCOUT               36
 #define WID_M60                 37
 
+// Other
+#define HOUR                    3600
+#define LIB_VERSUS_STATS        "versus_stats"
 
-// Infected Kill
-#define SURVIVOR_K_CI           0  // Surivivor Killed Common Infected
-#define SURVIVOR_K_SMOKER       1  // Surivivor Killed Smoker
-#define SURVIVOR_K_BOOMER       2  // Surivivor Killed Boomer
-#define SURVIVOR_K_HUNTER       3  // Surivivor Killed Hunter
-#define SURVIVOR_K_SPITTER      4  // Surivivor Killed Spitter
-#define SURVIVOR_K_JOCKEY       5  // Surivivor Killed Jockey
-#define SURVIVOR_K_CHARGER      6  // Surivivor Killed Changer
-#define SURVIVOR_K_WITCH        7  // Surivivor Killed Witch
-#define SURVIVOR_K_TANK         8  // Surivivor Killed Tank
-
-// Infected Kill Headshot
-#define SURVIVOR_K_CI_HS        9  // Surivivor Killed Common Infected (Headshot)
-#define SURVIVOR_K_SMOKER_HS    10 // Surivivor Killed Smoker (Headshot)
-#define SURVIVOR_K_BOOMER_HS	11 // Surivivor Killed Boomer (Headshot)
-#define SURVIVOR_K_HUNTER_HS    12 // Surivivor Killed Hunter (Headshot)
-#define SURVIVOR_K_SPITTER_HS   13 // Surivivor Killed Spitter (Headshot)
-#define SURVIVOR_K_JOCKEY_HS    14 // Surivivor Killed Jockey (Headshot)
-#define SURVIVOR_K_CHARGER_HS   15 // Surivivor Killed Changer (Headshot)
-#define SURVIVOR_K_WITCH_HS     16 // Surivivor Killed Witch (Headshot)
-#define SURVIVOR_K_WITCH_OS     17 // Surivivor Killed Witch in one shot
-
-// Gun statistic
-#define SURVIVOR_K_SMG          18 // Surivivor killed CI/SI by SMG
-#define SURVIVOR_K_SILENCED     19 // Surivivor killed CI/SI by SMG silenced
-#define SURVIVOR_K_MP5          20 // Surivivor killed CI/SI by MP5
-#define SURVIVOR_K_M16          21 // Surivivor killed CI/SI by RIFLE (M16)
-#define SURVIVOR_K_DESERT       22 // Surivivor killed CI/SI by Desert
-#define SURVIVOR_K_AK47         23 // Surivivor killed CI/SI by AK47
-#define SURVIVOR_K_SG552        24 // Surivivor killed CI/SI by Sg552
-#define SURVIVOR_K_M60          25 // Surivivor killed CI/SI by M60
-#define SURVIVOR_K_HUNTING      26 // Surivivor killed CI/SI by Hunting
-#define SURVIVOR_K_MILITARY     27 // Surivivor killed CI/SI by Military
-#define SURVIVOR_K_AWP          28 // Surivivor killed CI/SI by Awp
-#define SURVIVOR_K_SCOUT        29 // Surivivor killed CI/SI by Scout
-#define SURVIVOR_K_PUMP         30 // Surivivor killed CI/SI by Pump
-#define SURVIVOR_K_CHROME       31 // Surivivor killed CI/SI by CHROME
-#define SURVIVOR_K_AUTO         32 // Surivivor killed CI/SI by Auto
-#define SURVIVOR_K_SPAS         33 // Surivivor killed CI/SI by Spas
-#define SURVIVOR_K_PISTOL       34 // Surivivor killed CI/SI by PISTOL
-#define SURVIVOR_K_MAGNUM       35 // Surivivor killed CI/SI by Magnum
-#define SURVIVOR_K_GL           36 // Surivivor killed CI/SI by Grenade Launcher
-    
-// Melee statistic
-#define SURVIVOR_K_KATANA       37 // Surivivor killed CI/SI by Katana
-#define SURVIVOR_K_AXE          38 // Surivivor killed CI/SI by Axe
-#define SURVIVOR_K_MACHATE      39 // Surivivor killed CI/SI by Machete
-#define SURVIVOR_K_KNIFE        40 // Surivivor killed CI/SI by Knife
-#define SURVIVOR_K_SAW          41 // Surivivor killed CI/SI by Chainsaw
-#define SURVIVOR_K_PITCHFORK    42 // Surivivor killed CI/SI by Pitchfork
-#define SURVIVOR_K_SHOVEL       43 // Surivivor killed CI/SI by Shovel
-#define SURVIVOR_K_GOLF         44 // Surivivor killed CI/SI by Golfclub
-#define SURVIVOR_K_GUITAR       45 // Surivivor killed CI/SI by Guitar
-#define SURVIVOR_K_TONFA        46 // Surivivor killed CI/SI by tonfa
-#define SURVIVOR_K_BASEBALL     47 // Surivivor killed CI/SI by Baseball
-#define SURVIVOR_K_CRICKET      48 // Surivivor killed CI/SI by Cricket
-#define SURVIVOR_K_PAN          49 // Surivivor killed CI/SI by Pan
-#define SURVIVOR_K_CROWBAR      50 // Surivivor killed CI/SI by Crowbar
-
-// Other statistic
-#define SURVIVOR_K_PIPE         51 // Surivivor killed CI/SI by Pipe
-#define SURVIVOR_K_MOLOTOV      52 // Surivivor killed CI/SI by Molotov
-#define SURVIVOR_K_NONE         53 // Surivivor killed CI/SI by none (e.g. Throwables)
-
-#define SURVIVOR_PILLS          54 // Surivivor used Pills 
-#define SURVIVOR_ADRENALINE     55 // Surivivor used Adrenaline 
-#define SURVIVOR_MEDKIT         56 // Surivivor used Medikit 
-#define SURVIVOR_HEALED         57 // Surivivor is healed by someone
-#define SURVIVOR_SELF_HEALED    58 // Surivivor is healed by himself
-#define SURVIVOR_HEAL           59 // Surivivor used Medikit for healing someone
-#define SURVIVOR_DEFIBRILLATE   60 // Surivivor defibrillated someone
-#define SURVIVOR_DEFIBRILLATED  61 // Surivivor is defibrillated by someone
-
-#define SURVIVOR_TH_MOLOTOV     62 // Surivivor throwed Molotov
-#define SURVIVOR_TH_PIPE        63 // Surivivor throwed Pipe bomb
-#define SURVIVOR_TH_VOMITJAR    64 // Surivivor throwed Vomitjar
-
-// Survivor event
-#define SURVIVOR_SHOT           65 // Amount of surivivor shot
-#define SURVIVOR_HIT            66 // Amount of surivivor hit
-#define SURVIVOR_REVIVE         67 // Surivivor revived someone
-#define SURVIVOR_REVIVED        68 // Surivivor is revived by someone
-#define SURVIVOR_HURT           69 // Amount of damage hurt
-#define SURVIVOR_DMG            70 // Amount of damage made
-#define SURVIVOR_TEAMKILL       71 // Amount of Team kill
-#define SURVIVOR_KILL           72 // Amount of Killing infected (last hit)
-#define SURVIVOR_INCAPACITATED  73 // Amount of surivivor incapacated
-#define SURVIVOR_DEATH          74 // Amount of death of surivivor
-    
-// Infected event
-#define INFECTED_HURT           75 // Amount of damage hurt
-#define INFECTED_DMG            76 // Amount of damage made
-#define INFECTED_KILL           77 // Amount of Killing Surivivor
-#define INFECTED_INCAPACITATE   78 // Amount of Incapacitating Surivivor
-#define INFECTED_DEATH          79 // Amount of death of infected
-
-#define CODE_STATS_SIZE         80
-
-
-#define STATE_LOADING           0
-#define STATE_LOADED            1
-
-
+// Macros
 #define IS_VALID_CLIENT(%1)     (%1 > 0 && %1 <= MaxClients)
 #define IS_REAL_CLIENT(%1)      (IsClientInGame(%1) && !IsFakeClient(%1))
 #define IS_VALID_INGAME(%1)     (IS_VALID_CLIENT(%1) && IsClientInGame(%1))
@@ -215,27 +110,11 @@ enum struct Player
 	bool IsNew() {
 		return this.id == 0;
 	}
-
-	void Clear()
-	{
-		this.id = 0;
-		this.lastName[0] = '\0';
-		this.playedTime = 0;
-		this.rank = 0;
-		this.STATE = STATE_LOADING;
-
-		for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++) 
-		{
-			this.stats[iCode] = 0;
-		}
-	}
 }
 
 
 Player
-	g_pPlayers[MAXPLAYERS + 1],
-	g_pClientViewPlayer[MAXPLAYERS + 1],
-	g_pTopPlayers[6];
+	g_pPlayers[MAXPLAYERS + 1];
 
 bool
 	g_bLate = false,
@@ -246,15 +125,15 @@ bool
 ConVar
 	g_hGameMode = null,
 	g_hSurvivorLimit = null,
-	g_hMaxLastVisit,
-	g_hMinRankedHours;
+	g_hMaxLastVisit = null,
+	g_hMinRankedHours = null;
 
 int
-	g_iTop = 0,
-	g_iSurvivorLimit = 0,
-	g_iMinRankedHours = 0,
-	g_iPlayedTimeStartAt[MAXPLAYERS + 1] = {0, ...},
-	g_iClientPage[MAXPLAYERS + 1] = {0, ...};
+	g_iSurvivorLimit = 4,
+	g_iPlayedTimeStartAt[MAXPLAYERS + 1] = {0, ...};
+
+float
+	g_fMinRankedHours = 0.0;
 
 StringMap
 	g_tWeaponNames = null;
@@ -323,8 +202,6 @@ public void OnRoundIsLive()
  */
 public APLRes AskPluginLoad2(Handle myself, bool bLate, char[] sErr, int iErrLen)
 {
-	g_bLate = bLate;
-
 	EngineVersion engine = GetEngineVersion();
 
 	if (engine != Engine_Left4Dead2) {
@@ -332,8 +209,57 @@ public APLRes AskPluginLoad2(Handle myself, bool bLate, char[] sErr, int iErrLen
 		return APLRes_SilentFailure;
 	}
 
+	g_bLate = bLate;
+
+	InitNatives();
+	RegPluginLibrary(LIB_VERSUS_STATS);
 
 	return APLRes_Success;
+}
+
+void InitNatives()
+{
+	CreateNative("GetClientRank", Native_GetClientRank);
+	CreateNative("GetClientRating", Native_GetClientRating);
+	CreateNative("GetClientStats", Native_GetClientStats);
+	CreateNative("GetClientPlayedTime", Native_GetClientPlayedTime);
+	CreateNative("GetClientState", Native_GetClientState);
+	CreateNative("GetMinRankedHours", Native_GetMinRankedHours);
+}
+
+int Native_GetClientRank(Handle plugin, int numParams)
+{
+	int iClient = GetNativeCell(1);
+	return g_pPlayers[iClient].rank;
+}
+
+any Native_GetClientRating(Handle plugin, int numParams)
+{
+	int iClient = GetNativeCell(1);
+	return CalculateRating(g_pPlayers[iClient]);
+}
+
+int Native_GetClientStats(Handle plugin, int numParams)
+{
+	int iClient = GetNativeCell(1), iCode = GetNativeCell(2);
+	return g_pPlayers[iClient].stats[iCode];
+}
+
+int Native_GetClientPlayedTime(Handle plugin, int numParams)
+{
+	int iClient = GetNativeCell(1);
+	return g_pPlayers[iClient].playedTime;
+}
+
+int Native_GetClientState(Handle plugin, int numParams)
+{
+	int iClient = GetNativeCell(1);
+	return g_pPlayers[iClient].STATE;
+}
+
+any Native_GetMinRankedHours(Handle plugin, int numParams)
+{
+	return g_fMinRankedHours;
 }
 
 /**
@@ -343,12 +269,10 @@ public APLRes AskPluginLoad2(Handle myself, bool bLate, char[] sErr, int iErrLen
  */
 public void OnPluginStart()
 {
-	InitTranslations();
 	InitWeaponNamesTrie();
-	InitEvents();
 	InitCvars();
+	InitEvents();
 	InitDatabase();
-	InitCmds();
 
 	if (g_bLate) 
 	{
@@ -368,25 +292,6 @@ public void OnPluginEnd()
 {
 	if (g_tWeaponNames != null) {
 		delete g_tWeaponNames;
-	}
-}
-
-/**
- * Loads dictionary files. On failure, stops the plugin execution.
- * 
- * @noreturn
- */
-void InitTranslations()
-{
-	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, PLATFORM_MAX_PATH, "translations/" ... TRANSLATIONS ... ".txt");
-
-	if (FileExists(sPath)) {
-		LoadTranslations(TRANSLATIONS);
-	} 
-	
-	else {
-		SetFailState("Path %s not found", sPath);
 	}
 }
 
@@ -428,8 +333,8 @@ void InitEvents()
 {
 	HookEvent("versus_round_start",		Event_RoundStart);
 	HookEvent("round_end",			Event_RoundEnd);
-	HookEvent("player_changename",		Event_ChangeName, EventHookMode_Post);
-	HookEvent("player_team",		Event_PlayerTeam, EventHookMode_Post);
+	HookEvent("player_changename",		Event_ChangeName);
+	HookEvent("player_team",		Event_PlayerTeam);
 
 	HookEvent("player_incapacitated",	Event_PlayerIncapacitated);
 	HookEvent("pills_used",			Event_PillsUsed);
@@ -437,9 +342,10 @@ void InitEvents()
 	HookEvent("heal_success",		Event_HealSuccess);
 	HookEvent("defibrillator_used",		Event_DefibrillatorUsed);
 	HookEvent("revive_success",		Event_ReviveSuccess);
-	HookEvent("weapon_fire",		Event_WeaponFire, EventHookMode_Post);
+	HookEvent("weapon_fire",		Event_WeaponFire);
 	HookEvent("infected_death",		Event_InfectedDeath);
 	HookEvent("witch_killed",		Event_WitchKilled);
+	HookEvent("tank_spawn",		Event_TankSpawn);
 	HookEvent("player_death",		Event_PlayerDeath);
 	HookEvent("player_hurt",		Event_PlayerHurt);
 }
@@ -471,11 +377,6 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 		// Update rank (async)
 		UpdatePlayerRank(iClient);
 	}
-
-	// Update top (sync)
-	Database db = ConnectDatabase();
-	LoadTopPlayers(db);
-	delete db;
 
 	return Plugin_Continue;
 }
@@ -593,7 +494,7 @@ public Action Event_WeaponFire(Event event, char[] event_name, bool dontBroadcas
 		g_pPlayers[iClient].AddStats(SURVIVOR_TH_VOMITJAR, 1);
 	}
 
-	if (g_tWeaponNames.ContainsKey(sWeaponName)) {
+	if (sWeaponName[0] != 'm' && g_tWeaponNames.ContainsKey(sWeaponName)) {
 		g_pPlayers[iClient].AddStats(SURVIVOR_SHOT, 1);
 	}
 
@@ -665,10 +566,13 @@ public Action Event_HealSuccess(Event event, char[] event_name, bool dontBroadca
 
 	g_pPlayers[iClient].AddStats(SURVIVOR_MEDKIT, 1);
 
-	if (iClient != iTarget) {
+	if (iClient != iTarget)
+	{
 		g_pPlayers[iClient].AddStats(SURVIVOR_HEAL, 1);
 		g_pPlayers[iTarget].AddStats(SURVIVOR_HEALED, 1);
-	} else {
+	}
+	
+	else {
 		g_pPlayers[iClient].AddStats(SURVIVOR_SELF_HEALED, 1);
 	}
 
@@ -729,16 +633,20 @@ public Action Event_InfectedDeath(Event event, char[] event_name, bool dontBroad
 	int iWeaponId = event.GetInt("weapon_id");
 
 	AddWeaponKill(iKiller, iWeaponId);
+	
+	g_pPlayers[iKiller].AddStats(SURVIVOR_K_CI, 1);
 
 	bool bHeadShot = event.GetBool("headshot");
 
-	g_pPlayers[iKiller].AddStats(bHeadShot ? SURVIVOR_K_CI_HS : SURVIVOR_K_CI, 1);
+	if (bHeadShot) {
+		g_pPlayers[iKiller].AddStats(SURVIVOR_K_CI_HS, 1);
+	}
 
 	return Plugin_Continue;
 }
 
 /**
- * Surivivor Killed Witch in one shot.
+ * Surivivor Killed Witch.
  */
 public Action Event_WitchKilled(Event event, char[] event_name, bool dontBroadcast)
 {
@@ -746,16 +654,39 @@ public Action Event_WitchKilled(Event event, char[] event_name, bool dontBroadca
 		return Plugin_Continue;
 	}
 
-	int iKiller = GetClientOfUserId(event.GetInt("attacker"));
+	int iKiller = GetClientOfUserId(event.GetInt("userid"));
 
 	if (!IS_VALID_SURVIVOR(iKiller)) {
 		return Plugin_Continue;
 	}
 
+	g_pPlayers[iKiller].AddStats(SURVIVOR_K_WITCH, 1);
+
 	bool bOneShot = event.GetBool("oneshot");
 
 	if (bOneShot) {
 		g_pPlayers[iKiller].AddStats(SURVIVOR_K_WITCH_OS, 1);
+	}
+	
+	return Plugin_Continue;
+}
+
+/**
+ * Surivivor met Tank.
+ */
+public Action Event_TankSpawn(Event event, char[] event_name, bool dontBroadcast)
+{
+	if (CanRecordStats() == false) {
+		return Plugin_Continue;
+	}
+
+	for (int iClient = 1; iClient <= MaxClients; iClient++) 
+	{
+		if (!IS_REAL_CLIENT(iClient) || !IS_SURVIVOR(iClient) || !IsPlayerAlive(iClient)) {
+			continue;
+		}
+
+		g_pPlayers[iClient].AddStats(SURVIVOR_MET_TANK, 1);
 	}
 	
 	return Plugin_Continue;
@@ -781,11 +712,7 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 		g_pPlayers[iVictim].AddStats(SURVIVOR_DEATH, 1);
 	}
 
-	if (IS_VALID_SURVIVOR(iVictim) && IS_VALID_SURVIVOR(iKiller)) {
-		g_pPlayers[iVictim].AddStats(SURVIVOR_TEAMKILL, 1);
-	}
-
-	else if (IS_VALID_SURVIVOR(iKiller) && IS_VALID_INFECTED(iVictim))
+	if (IS_VALID_SURVIVOR(iKiller) && IS_VALID_INFECTED(iVictim))
 	{
 		char sWeaponName[32];
 		event.GetString("weapon", sWeaponName, sizeof(sWeaponName));
@@ -795,17 +722,30 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 
 		AddWeaponKill(iKiller, iWeaponId);
 		
-		bool bHeadShot = event.GetBool("headshot");
-		int zClass = GetEntProp(iVictim, Prop_Send, "m_zombieClass");
+		int iZombieClass = GetEntProp(iVictim, Prop_Send, "m_zombieClass");
 
-		g_pPlayers[iKiller].AddStats(GetKillCodeByZC(zClass, bHeadShot), 1);
-		
-		g_pPlayers[iKiller].AddStats(SURVIVOR_KILL, 1);
+		if (iZombieClass != ZC_TANK)
+		{
+			int iKillCode = GetKillCodeByZombieClass(iZombieClass);
+
+			g_pPlayers[iKiller].AddStats(iKillCode, 1);
+			g_pPlayers[iKiller].AddStats(SURVIVOR_KILL, 1);
+
+			bool bHeadShot = event.GetBool("headshot");
+
+			if (bHeadShot) {
+				g_pPlayers[iKiller].AddStats(SURVIVOR_K_SI_HS, 1);
+			}
+		}
 	}
 
 	else if(IS_VALID_INFECTED(iKiller) && IS_VALID_SURVIVOR(iVictim))
 	{
-		g_pPlayers[iVictim].AddStats(INFECTED_KILL, 1);
+		g_pPlayers[iKiller].AddStats(INFECTED_KILL, 1);
+	}
+
+	else if (IS_VALID_SURVIVOR(iKiller) && IS_VALID_SURVIVOR(iVictim)) {
+		g_pPlayers[iKiller].AddStats(SURVIVOR_TEAMKILL, 1);
 	}
 
 	return Plugin_Continue;
@@ -820,10 +760,15 @@ public Action Event_PlayerHurt(Event event, char[] event_name, bool dontBroadcas
 		return Plugin_Continue;
 	}
 
-	int iVictim = GetClientOfUserId(event.GetInt("userid"));
-	int iAttacker = GetClientOfUserId(event.GetInt("attacker"));
 	int iDamage = event.GetInt("dmg_health");
 	
+	if (iDamage >= 5000) {
+		return Plugin_Continue;
+	}
+
+	int iVictim = GetClientOfUserId(event.GetInt("userid"));
+	int iAttacker = GetClientOfUserId(event.GetInt("attacker"));
+
 	if (IS_VALID_SURVIVOR(iVictim) && IS_VALID_INFECTED(iAttacker)) 
 	{
 		g_pPlayers[iAttacker].AddStats(INFECTED_DMG, iDamage);
@@ -832,13 +777,17 @@ public Action Event_PlayerHurt(Event event, char[] event_name, bool dontBroadcas
 
 	else if (IS_VALID_SURVIVOR(iAttacker) && IS_VALID_INFECTED(iVictim))
 	{
-		g_pPlayers[iAttacker].AddStats(SURVIVOR_HIT, 1);
+		char sWeaponName[32];
+		event.GetString("weapon", sWeaponName, sizeof(sWeaponName));
 
-		g_pPlayers[iVictim].AddStats(INFECTED_HURT, iDamage);
- 
-		if (iDamage < 5000) { // hack
-			g_pPlayers[iAttacker].AddStats(SURVIVOR_DMG, iDamage);
+		if (sWeaponName[0] != 'm' && g_tWeaponNames.ContainsKey(sWeaponName)) {
+			g_pPlayers[iAttacker].AddStats(SURVIVOR_HIT, 1);
 		}
+
+		int iZombieClass = GetEntProp(iVictim, Prop_Send, "m_zombieClass");
+
+		g_pPlayers[iAttacker].AddStats(iZombieClass == ZC_TANK ? SURVIVOR_DMG_TANK : SURVIVOR_DMG, iDamage);
+		g_pPlayers[iVictim].AddStats(INFECTED_HURT, iDamage);
 	}
 
 	return Plugin_Continue;
@@ -860,11 +809,9 @@ void InitCvars()
 
 	g_hMaxLastVisit = CreateConVar("vs_max_last_visit", "2592000", "The maximum time since the last visit that a record will be found in the database", FCVAR_NOTIFY);
 
-	g_hMinRankedHours = CreateConVar("vs_min_ranked_hours", "1", "Minimum number of hours to display player statistics", FCVAR_NOTIFY);
+	g_hMinRankedHours = CreateConVar("vs_min_ranked_hours", "3.0", "Minimum number of hours to display player statistics", FCVAR_NOTIFY);
 	g_hMinRankedHours.AddChangeHook(OnMinRankedHoursChanged);
-	g_iMinRankedHours = g_hMinRankedHours.IntValue;
-
-	AutoExecConfig(true, AUTO_EXEC_CONFIG);
+	g_fMinRankedHours = g_hMinRankedHours.FloatValue;
 }
 
 /**
@@ -896,7 +843,7 @@ public void OnSurvivorLimitChanged(ConVar hConVar, const char[] sOldLimit, const
  * @noreturn
  */
 public void OnMinRankedHoursChanged(ConVar hConVar, const char[] sOldValue, const char[] sNewValue) {
-	g_iMinRankedHours = hConVar.IntValue;
+	g_fMinRankedHours = hConVar.FloatValue;
 }
 
 /**
@@ -919,7 +866,7 @@ public void OnConfigsExecuted()
  */
 void CheckGameMode(const char[] sGameMode)
 {
-	if (StrContains(sGameMode, GAMEMODE_VERSUS, false) == -1) {
+	if (!StrEqual(sGameMode, "versus", false) && !StrEqual(sGameMode, "mutation12", false)) {
 		SetFailState("Unsupported mode %s.", sGameMode);
 	}
 }
@@ -941,8 +888,6 @@ void InitDatabase()
 		SetFailState("Create tables failure.");
 	}
 
-	LoadTopPlayers(db);
-
 	ClearDatabase(db);
 
 	delete db;
@@ -957,7 +902,7 @@ public void OnClientPostAdminCheck(int iClient)
 {
 	if (IS_REAL_CLIENT(iClient)) 
 	{
-		g_pPlayers[iClient].Clear();
+		ClearPlayerData(iClient);
 		LoadPlayerData(iClient);
 	}
 }
@@ -975,192 +920,6 @@ public void OnClientDisconnect(int iClient)
 		BreakPlayedTime(iClient, GetTime());
 		SavePlayerData(iClient);
 	}
-}
-
-/**
- * Fragment.
- * 
- * @noreturn
- */
-void InitCmds()
-{
-	RegConsoleCmd("sm_top",		Cmd_ShowTop);
-	RegConsoleCmd("sm_rank",	Cmd_ShowRank);
-	RegConsoleCmd("sm_rankstats",	Cmd_ShowRankStats);
-}
-
-public Action Cmd_ShowTop(int iClient, int iArgs)
-{
-	if (IS_VALID_CLIENT(iClient)) {
-		Top(iClient);
-	}
-
-	return Plugin_Handled;
-}
-
-public Action Cmd_ShowRank(int iClient, int iArgs)
-{
-	if (IS_VALID_CLIENT(iClient))
-	{
-		if (g_pPlayers[iClient].rank > 0) {
-			CPrintToChat(iClient, "%T", "RANK", iClient, g_pPlayers[iClient].rank);
-		}
-
-		else {
-			CPrintToChat(iClient, "%T", "WITHOUT_RANK", iClient, (float(g_iMinRankedHours) - SecToHours(g_pPlayers[iClient].playedTime)));
-		}
-	}
-
-	return Plugin_Handled;
-}
-
-public Action Cmd_ShowRankStats(int iClient, int iArgs)
-{
-	if (IS_VALID_CLIENT(iClient))
-	{
-		int iTarget = iClient;
-
-		if (iArgs > 0)
-		{
-			char sArg[32];
-			GetCmdArg(1, sArg, sizeof(sArg));
-
-			iTarget = FindOneTarget(iClient, sArg);
-
-			if (iTarget == -1)
-			{
-				CPrintToChat(iClient, "%T", "RANKSTATS_BAD_ARG", iClient, sArg);
-				return Plugin_Handled;
-			}
-		}
-
-		g_pClientViewPlayer[iClient] = g_pPlayers[iTarget];
-		RankStats(iClient, g_pClientViewPlayer[iClient], g_iClientPage[iClient] = 0);
-	}
-
-	return Plugin_Handled;
-}
-
-void Top(int iClient) 
-{
-	Panel hPanel = new Panel();
-
-	char sTemp[128];
-
-	if (g_iTop) 
-	{
-		Format(sTemp, sizeof(sTemp), "%T", "TOP_TITLE", iClient, g_iTop);
-		hPanel.SetTitle(sTemp);
-		hPanel.DrawText(" ");
-
-		for (int i = 0; i < g_iTop; i++)
-		{
-			hPanel.DrawItem(g_pTopPlayers[i].lastName);
-
-			Format(sTemp, sizeof(sTemp), "%T", "TOP_ITEM", iClient, SecToHours(g_pTopPlayers[i].playedTime), CalculateEfficiency(g_pTopPlayers[i]));
-			hPanel.DrawText(sTemp);
-		}
-	}
-
-	else 
-	{
-		Format(sTemp, sizeof(sTemp), "%T", "NOT_FOUND", iClient);
-		hPanel.DrawText(sTemp);
-	}
-
-	hPanel.DrawText(" ");
-
-	Format(sTemp, sizeof(sTemp), "%T", "CLOSE", iClient);
-	hPanel.DrawItem(sTemp, ITEMDRAW_CONTROL);
-
-	hPanel.Send(iClient, HandleTop, MENU_TIME_FOREVER);
-
-	delete hPanel;
-}
-
-public int HandleTop(Menu hMenu, MenuAction action, int iClient, int iSelectedIndex)
-{
-	if (action == MenuAction_Select && iSelectedIndex <= g_iTop)
-	{
-		g_pClientViewPlayer[iClient] = g_pTopPlayers[-- iSelectedIndex];
-		RankStats(iClient, g_pClientViewPlayer[iClient], g_iClientPage[iClient] = 0);
-	}
-
-	return 0;
-}
-
-void RankStats(int iClient, Player pViewPlayer, int iPage) 
-{
-	Panel hPanel = new Panel();
-
-	char sTemp[128];
-
-	Format(sTemp, sizeof(sTemp), "%T", "RANKSTATS_TITLE", iClient, pViewPlayer.rank, pViewPlayer.lastName, SecToHours(pViewPlayer.playedTime), CalculateEfficiency(pViewPlayer));
-	hPanel.SetTitle(sTemp);
-	hPanel.DrawText(" ");
-
-	int iStart = iPage * PER_PAGE;
-	int iEnd = (iPage + 1) * PER_PAGE;
-	int iSpace = 0;
-
-	if (iEnd > CODE_STATS_SIZE)
-	{
-		iSpace = iEnd - CODE_STATS_SIZE;
-		iEnd = CODE_STATS_SIZE;
-	}
-
-	char sPattern[16];
-	for (int iStats = iStart; iStats < iEnd; iStats++)
-	{
-		Format(sPattern, sizeof(sPattern), "CODE_STATS_%d", iStats);
-		Format(sTemp, sizeof(sTemp), "%T", sPattern, iClient, pViewPlayer.stats[iStats]);
-		hPanel.DrawText(sTemp);
-	}
-	
-	for (int i = 0; i < iSpace; i++)
-	{
-		hPanel.DrawText(" ");
-	}
-
-	hPanel.DrawText(" ");
-
-	Format(sTemp, sizeof(sTemp), "%T", "NEXT", iClient);
-	hPanel.DrawItem(sTemp, iEnd < CODE_STATS_SIZE ? ITEMDRAW_CONTROL : ITEMDRAW_DISABLED);
-
-	if (iPage == 0) {
-		Format(sTemp, sizeof(sTemp), "%T", "CLOSE", iClient);
-		hPanel.DrawItem(sTemp, ITEMDRAW_CONTROL);
-	} else {
-		Format(sTemp, sizeof(sTemp), "%T", "BACK", iClient);
-		hPanel.DrawItem(sTemp, ITEMDRAW_CONTROL);
-	}
-
-	hPanel.Send(iClient, HandleRankStats, MENU_TIME_FOREVER);
-
-	delete hPanel;
-}
-
-public int HandleRankStats(Menu hMenu, MenuAction action, int iClient, int iSelectedIndex)
-{
-	if (action == MenuAction_Select)
-	{
-		switch (iSelectedIndex) 
-		{
-			case 1: {
-				if (++ g_iClientPage[iClient] * PER_PAGE < CODE_STATS_SIZE) {
-					RankStats(iClient, g_pClientViewPlayer[iClient], g_iClientPage[iClient]);
-				}
-			}
-
-			case 2: {
-				if (-- g_iClientPage[iClient] >= 0) {
-					RankStats(iClient, g_pClientViewPlayer[iClient], g_iClientPage[iClient]);
-				}
-			}
-		}
-	}
-
-	return 0;
 }
 
 void BreakPlayedTime(int iClient, int iBreakTime)
@@ -1204,23 +963,6 @@ bool CanRecordStats() {
 	return g_bRoundIsLive && g_bFullTeam;
 }
 
-
-Database ConnectDatabase()
-{
-	char error[255];
-	Database db;
-	
-	if (SQL_CheckConfig(DATABASE)) {
-		db = SQL_Connect(DATABASE, true, error, sizeof(error));
-	}
-
-	if (db == null) {
-		LogError("Could not connect to database: %s", error);
-	}
-	
-	return db;
-}
-
 bool CheckDatabaseDriver(Database db) 
 {
 	char ident[16];
@@ -1245,7 +987,7 @@ bool CreateTable(Database db)
 	steam_id varchar(32) NOT NULL,\
 	played_time int(10) UNSIGNED NOT NULL,\
 	last_visit int(10) UNSIGNED NOT NULL,\
-	efficiency float(10,3) UNSIGNED NOT NULL,\
+	rating float(10,3) UNSIGNED NOT NULL,\
 	__STATS__ PRIMARY KEY (id));";
 
 	for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++) 
@@ -1267,56 +1009,6 @@ bool CreateTable(Database db)
 	SQL_UnlockDatabase(db);
 
 	return true;
-}
-
-void LoadTopPlayers(Database db)
-{
-	char sQuery[128];
-	Format(sQuery, sizeof(sQuery), "SELECT * FROM vs_players WHERE `played_time`>%d AND `efficiency`>0 ORDER BY `efficiency` DESC LIMIT 5;", HOUR * g_iMinRankedHours);
-
-	SQL_LockDatabase(db);
-
-	DBResultSet dbResult = SQL_Query(db, sQuery, sizeof(sQuery));
-
-	if (dbResult != null)
-	{
-		int iPos = 0;
-		int iColumnNum;
-
-		while (SQL_FetchRow(dbResult))
-		{
-			if (SQL_FieldNameToNum(dbResult, "last_name", iColumnNum)) {
-				SQL_FetchString(dbResult, iColumnNum, g_pTopPlayers[iPos].lastName, sizeof(g_pTopPlayers[].lastName));	
-			}
-
-			if (SQL_FieldNameToNum(dbResult, "played_time", iColumnNum)) {
-				g_pTopPlayers[iPos].playedTime = SQL_FetchInt(dbResult, iColumnNum);
-			}
-
-			if (SQL_FieldNameToNum(dbResult, "code_stats_0", iColumnNum)) 
-			{
-				for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++)
-				{
-					g_pTopPlayers[iPos].stats[iCode] = SQL_FetchInt(dbResult, iColumnNum + iCode);
-				}
-			}
-			
-			g_pTopPlayers[iPos].rank = ++ iPos;
-		}
-
-		g_iTop = iPos;
-
-		delete dbResult;
-	}
-
-	else
-	{
-		char sError[255];
-		SQL_GetError(db, sError, sizeof(sError));
-		LogError("Failed to query: %s", sError);
-	}
-
-	SQL_UnlockDatabase(db);
 }
 
 void ClearDatabase(Database db)
@@ -1342,7 +1034,7 @@ void LoadPlayerData(int iClient)
 	GetClientAuthId(iClient, AuthId_SteamID64, sSteamId, sizeof(sSteamId));
 
 	char sQuery[256];
-	Format(sQuery, sizeof(sQuery), "SELECT (SELECT count(1) FROM vs_players b WHERE  b.`efficiency` > a.`efficiency`)+1 as rank, a.* FROM vs_players a WHERE `steam_id`='%s' LIMIT 1;", sSteamId);
+	Format(sQuery, sizeof(sQuery), "SELECT (SELECT count(1) FROM vs_players b WHERE  b.`rating` > a.`rating`)+1 as rank, a.* FROM vs_players a WHERE `steam_id`='%s' LIMIT 1;", sSteamId);
 
 	Database db = ConnectDatabase();
 
@@ -1375,7 +1067,7 @@ void LoadPlayerThread(Handle owner, Handle hndl, const char[] error, int iClient
 		{
 			g_pPlayers[iClient].playedTime = SQL_FetchInt(hndl, iColumnNum);
 
-			if (g_pPlayers[iClient].playedTime > (HOUR * g_iMinRankedHours) && SQL_FieldNameToNum(hndl, "rank", iColumnNum)) {
+			if (g_pPlayers[iClient].playedTime > RoundFloat(HOUR * g_fMinRankedHours) && SQL_FieldNameToNum(hndl, "rank", iColumnNum)) {
 				g_pPlayers[iClient].rank = SQL_FetchInt(hndl, iColumnNum); 
 			}
 		}
@@ -1394,11 +1086,11 @@ void LoadPlayerThread(Handle owner, Handle hndl, const char[] error, int iClient
 
 void SavePlayerData(int iClient) 
 {
-	if (g_pPlayers[iClient].STATE != STATE_LOADED) {
+	if (g_pPlayers[iClient].STATE != STATE_LOADED || g_pPlayers[iClient].playedTime == 0) {
 		return;
 	}
 
-	Database db = ConnectDatabase();
+	PreparationAvg(g_pPlayers[iClient]);
 
 	if (g_pPlayers[iClient].IsNew() == false)
 	{
@@ -1406,7 +1098,7 @@ void SavePlayerData(int iClient)
 		char sStatsList[CODE_STATS_SIZE * UPDATE_CODE_STATS_TEMP_SIZE];
 
 		char sQuery[256 + sizeof(sStatsList)];
-		Format(sQuery, sizeof(sQuery), "UPDATE `vs_players` SET `last_name`='%s',`played_time`=%d,`last_visit`=%d,__STATS__`efficiency`=%f WHERE `id`=%d;", g_pPlayers[iClient].lastName, g_pPlayers[iClient].playedTime, GetTime(), CalculateEfficiency(g_pPlayers[iClient]), g_pPlayers[iClient].id);
+		Format(sQuery, sizeof(sQuery), "UPDATE `vs_players` SET `last_name`='%s',`played_time`=%d,`last_visit`=%d,__STATS__`rating`=%f WHERE `id`=%d;", g_pPlayers[iClient].lastName, g_pPlayers[iClient].playedTime, GetTime(), CalculateRating(g_pPlayers[iClient]), g_pPlayers[iClient].id);
 
 		for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++)
 		{
@@ -1415,7 +1107,7 @@ void SavePlayerData(int iClient)
 		}
 
 		ReplaceString(sQuery, sizeof(sQuery), "__STATS__", sStatsList, false);
-		SQL_TQuery(db, SavePlayerThread, sQuery, iClient);
+		SQL_TQuery(ConnectDatabase(), SavePlayerThread, sQuery, iClient);
 	}
 
 	else
@@ -1430,7 +1122,7 @@ void SavePlayerData(int iClient)
 		char sStatsValueList[CODE_STATS_SIZE * INSERT_CODE_STATS_VALUE_TEMP_SIZE];
  
 		char sQuery[192 + sizeof(sStatsColumnList) + sizeof(sStatsValueList)];
-		Format(sQuery, sizeof(sQuery), "INSERT INTO `vs_players` (`last_name`,`steam_id`,`played_time`,`last_visit`,__STATS_COLUMN__`efficiency`) VALUES ('%s','%s',%d,%d,__STATS_VALUE__%f);", g_pPlayers[iClient].lastName, sSteamId, g_pPlayers[iClient].playedTime, GetTime(), CalculateEfficiency(g_pPlayers[iClient]));
+		Format(sQuery, sizeof(sQuery), "INSERT INTO `vs_players` (`last_name`,`steam_id`,`played_time`,`last_visit`,__STATS_COLUMN__`rating`) VALUES ('%s','%s',%d,%d,__STATS_VALUE__%f);", g_pPlayers[iClient].lastName, sSteamId, g_pPlayers[iClient].playedTime, GetTime(), CalculateRating(g_pPlayers[iClient]));
 
 		for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++) 
 		{
@@ -1444,7 +1136,7 @@ void SavePlayerData(int iClient)
 		ReplaceString(sQuery, sizeof(sQuery), "__STATS_COLUMN__", sStatsColumnList, false);
 		ReplaceString(sQuery, sizeof(sQuery), "__STATS_VALUE__", sStatsValueList, false);
 
-		SQL_TQuery(db, SavePlayerThread, sQuery, iClient);
+		SQL_TQuery(ConnectDatabase(), SavePlayerThread, sQuery, iClient);
 	}
 }
 
@@ -1463,12 +1155,12 @@ void SavePlayerThread(Handle owner, Handle hndl, const char[] error, int iClient
 
 void UpdatePlayerRank(int iClient) 
 {
-	if (g_pPlayers[iClient].STATE != STATE_LOADED || g_pPlayers[iClient].IsNew() || g_pPlayers[iClient].playedTime < (HOUR * g_iMinRankedHours)) {
+	if (g_pPlayers[iClient].STATE != STATE_LOADED || g_pPlayers[iClient].IsNew() || g_pPlayers[iClient].playedTime < RoundFloat(HOUR * g_fMinRankedHours)) {
 		return;
 	}
 
 	char sQuery[192];
-	Format(sQuery, sizeof(sQuery), "SELECT (SELECT count(1) FROM vs_players b WHERE b.`efficiency`>a.`efficiency`)+1 as rank FROM vs_players a WHERE `id`=%d LIMIT 1;", g_pPlayers[iClient].id);
+	Format(sQuery, sizeof(sQuery), "SELECT (SELECT count(1) FROM vs_players b WHERE b.`rating`>a.`rating`)+1 as rank FROM vs_players a WHERE `id`=%d LIMIT 1;", g_pPlayers[iClient].id);
 
 	Database db = ConnectDatabase();
 
@@ -1511,21 +1203,49 @@ void AddWeaponKill(int iClient, int iWeaponId)
 	}
 }
 
-float CalculateEfficiency(Player pTargetPlayer) 
+/**
+ * Helper.
+ */
+float CalculateRating(Player pTargetPlayer) 
 {
-	float fPlayedHours = SecToHours(pTargetPlayer.playedTime);
+	float fPlayedHours = SecToHours(pTargetPlayer.playedTime + 1);
 
-	if (fPlayedHours < float(g_iMinRankedHours)) {
+	if (fPlayedHours < g_fMinRankedHours) {
 		return 0.0;
 	}
 
-	float fPositive = float(pTargetPlayer.stats[SURVIVOR_KILL] + pTargetPlayer.stats[INFECTED_INCAPACITATE] * 4 + pTargetPlayer.stats[INFECTED_KILL] * 4);
-	float fNegative = float(pTargetPlayer.stats[SURVIVOR_DEATH] * 4 + pTargetPlayer.stats[SURVIVOR_INCAPACITATED] * 2 + pTargetPlayer.stats[SURVIVOR_TEAMKILL]);
-	float fEfficiency = (fPositive - fNegative) / (fPlayedHours + 1);
+	// <> Magic number <>
+	float fPositive = float(pTargetPlayer.stats[SURVIVOR_KILL] + pTargetPlayer.stats[INFECTED_INCAPACITATE] * 2 + pTargetPlayer.stats[INFECTED_KILL] * 6);
+	float fNegative = float(pTargetPlayer.stats[SURVIVOR_DEATH] * 4 + pTargetPlayer.stats[SURVIVOR_INCAPACITATED] * 2 + pTargetPlayer.stats[SURVIVOR_TEAMKILL] * 16);
+	float fRating = (fPositive - fNegative) / (fPlayedHours);
 
-	return fEfficiency > 0.0 ? fEfficiency : 0.0;
+	return fRating > 0.0 ? fRating : 0.0;
 }
 
+void PreparationAvg(Player pTargetPlayer) 
+{
+	if (pTargetPlayer.stats[SURVIVOR_MET_TANK]) {
+		pTargetPlayer.stats[SURVIVOR_AVG_DMG_TANK] = pTargetPlayer.stats[SURVIVOR_DMG_TANK] / pTargetPlayer.stats[SURVIVOR_MET_TANK];
+	}	
+}
+
+void ClearPlayerData(int iClient) 
+{
+	g_pPlayers[iClient].id = 0;
+	g_pPlayers[iClient].lastName[0] = '\0';
+	g_pPlayers[iClient].playedTime = 0;
+	g_pPlayers[iClient].rank = 0;
+	g_pPlayers[iClient].STATE = STATE_LOADING;
+
+	for (int iCodeStats = 0; iCodeStats < CODE_STATS_SIZE; iCodeStats ++)
+	{
+		g_pPlayers[iClient].stats[iCodeStats] = 0;
+	}
+}
+
+/**
+ * Helper.
+ */
 float SecToHours(int seconds)
 {
 	return float(seconds) / float(HOUR);
@@ -1570,59 +1290,59 @@ int GetKillCodeByWeaponId(int iWeponId)
  */
 int GetKillCodeByMeleeName(const char[] sMeleeName) 
 {
-	if (StrEqual(sMeleeName, "katana", false)) {
+	if (sMeleeName[0] == 'k' && sMeleeName[1] == 'a') { // katana
 		return SURVIVOR_K_KATANA;
 	}
 
-	else if (StrEqual(sMeleeName, "fireaxe", false)) {
+	else if (sMeleeName[0] == 'f' && sMeleeName[1] == 'i') { // fireaxe
 		return SURVIVOR_K_AXE;
 	}
 	
-	else if (StrEqual(sMeleeName, "machete", false)) {
+	else if (sMeleeName[0] == 'm') { // machete
 		return SURVIVOR_K_MACHATE;
 	}
 
-	else if (StrEqual(sMeleeName, "knife", false)) {
+	else if (sMeleeName[0] == 'k') { // knife
 		return SURVIVOR_K_KNIFE;
 	}
 
-	else if (StrEqual(sMeleeName, "chainsaw", false)) {
+	else if (sMeleeName[0] == 'c' && sMeleeName[1] == 'h') { // chainsaw
 		return SURVIVOR_K_SAW;
 	}
 	
-	else if (StrEqual(sMeleeName, "pitchfork", false)) {
+	else if (sMeleeName[0] == 'p') { // pitchfork
 		return SURVIVOR_K_PITCHFORK;
 	}
 	
-	else if (StrEqual(sMeleeName, "shovel", false)) {
+	else if (sMeleeName[0] == 's') { // shovel
 		return SURVIVOR_K_SHOVEL;
 	}
 
-	else if (StrEqual(sMeleeName, "golfclub", false)) {
+	else if (sMeleeName[0] == 'g') { // golfclub
 		return SURVIVOR_K_GOLF;
 	}
 
-	else if (StrEqual(sMeleeName, "electric_guitar", false)) {
+	else if (sMeleeName[0] == 'e') { // electric_guitar
 		return SURVIVOR_K_GUITAR;
 	}
 
-	else if (StrEqual(sMeleeName, "tonfa", false)) {
+	else if (sMeleeName[0] == 't') { // tonfa
 		return SURVIVOR_K_TONFA;
 	}
 
-	else if (StrEqual(sMeleeName, "baseball_bat", false)) {
+	else if (sMeleeName[0] == 'b') { // baseball_bat
 		return SURVIVOR_K_BASEBALL;
 	}
 
-	else if (StrEqual(sMeleeName, "cricket_bat", false)) {
+	else if (sMeleeName[0] == 'c' && sMeleeName[2] == 'i') { // cricket_bat
 		return SURVIVOR_K_CRICKET;
 	}
 
-	else if (StrEqual(sMeleeName, "frying_pan", false)) {
+	else if (sMeleeName[0] == 'f') { // frying_pan
 		return SURVIVOR_K_PAN;
 	}
 
-	else if (StrEqual(sMeleeName, "crowbar", false)) {
+	else if (sMeleeName[0] == 'c') { // crowbar
 		return SURVIVOR_K_CROWBAR;
 	}
 
@@ -1632,21 +1352,19 @@ int GetKillCodeByMeleeName(const char[] sMeleeName)
 /**
  * Helper.
  */
-int GetKillCodeByZC(int iZombieClass, bool bHeadShot) 
+int GetKillCodeByZombieClass(int iZombieClass) 
 {
 	switch(iZombieClass)
 	{
-		case ZC_SMOKER: return bHeadShot ? SURVIVOR_K_SMOKER_HS : SURVIVOR_K_SMOKER;
-		case ZC_BOOMER: return bHeadShot ? SURVIVOR_K_BOOMER_HS : SURVIVOR_K_BOOMER;
-		case ZC_HUNTER: return bHeadShot ? SURVIVOR_K_HUNTER_HS : SURVIVOR_K_HUNTER;
-		case ZC_SPITTER: return bHeadShot ? SURVIVOR_K_SPITTER_HS : SURVIVOR_K_SPITTER;
-		case ZC_JOCKEY: return bHeadShot ? SURVIVOR_K_JOCKEY_HS : SURVIVOR_K_JOCKEY;
-		case ZC_CHARGER: return bHeadShot ? SURVIVOR_K_CHARGER_HS : SURVIVOR_K_CHARGER;
-		case ZC_WITCH: return bHeadShot ? SURVIVOR_K_WITCH_HS : SURVIVOR_K_WITCH;
-		case ZC_TANK: return SURVIVOR_K_TANK;
+		case ZC_SMOKER: return SURVIVOR_K_SMOKER;
+		case ZC_BOOMER: return SURVIVOR_K_BOOMER;
+		case ZC_HUNTER: return SURVIVOR_K_HUNTER;
+		case ZC_SPITTER: return SURVIVOR_K_SPITTER;
+		case ZC_JOCKEY: return SURVIVOR_K_JOCKEY;
+		case ZC_CHARGER: return SURVIVOR_K_CHARGER;
 	}
 
-	return bHeadShot ? SURVIVOR_K_CI_HS : SURVIVOR_K_CI;
+	return -1;
 }
 
 /*
@@ -1666,29 +1384,4 @@ int GetPlayerCount()
 	}
 
 	return iCount;
-}
-
-/*
- * Returns the player that was found by the request.
- */
-int FindOneTarget(int iClient, const char[] sTarget)
-{
-	char iTargetName[MAX_TARGET_LENGTH];
-	int iTargetList[1];
-	bool isMl;
-	
-	if (ProcessTargetString(
-			sTarget,
-			iClient, 
-			iTargetList, 
-			1, 
-			COMMAND_FILTER_CONNECTED|COMMAND_FILTER_NO_IMMUNITY|COMMAND_FILTER_NO_MULTI|COMMAND_FILTER_NO_BOTS,
-			iTargetName,
-			sizeof(iTargetName),
-			isMl) > 0)
-	{
-		return iTargetList[0];
-	}
-
-	return -1;
 }

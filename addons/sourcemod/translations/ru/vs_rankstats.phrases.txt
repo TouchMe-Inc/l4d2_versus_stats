@@ -6,12 +6,17 @@
 		"ru"			"Ваш ранг {olive}#{1}{default}. Увидеть больше {olive}!rankstats"
 	}
 
-	"WITHOUT_RANK"
+	"RANK_NONE"
 	{
 		"#format"		"{1:.1f}"
 		"ru"			"На данный момент у вас нет ранга. Неоходимо сыграть {olive}{1}ч"
 	}
 
+	"RANK_IN_PROGRESS"
+	{
+		"en"			"Происходит подсчёт рейтинга"
+	}
+	
 	"RANKSTATS_BAD_ARG"
 	{
 		"#format"		"{1:s}"
@@ -33,28 +38,12 @@
 		"ru"			"Закрыть"
 	}
 
-	"TOP_TITLE"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Top {1}:"
-	}
-
-	"TOP_ITEM"
-	{
-		"#format"		"{1:.1f},{2:.1f}"
-		"ru"			"└ Рейтинг: {2}pts ∙ Сыграл: {1}ч"
-	}
-
-	"NOT_FOUND"
-	{
-		"ru"			"Ничего не найдено"
-	}
-
 	"RANKSTATS_TITLE"
 	{
-		"#format"		"{1:d},{2:s},{3:.1f},{4:.1f}"
-		"ru"			"#{1}: {2}\nРейтинг: {4}pts ∙ Сыграл: {3}ч"
+		"#format"		"{1:d},{2:N},{3:.1f},{4:.1f}"
+		"ru"			"#{1}: {2}\nРейтинг: {4}pts ∙ За время: {3}ч"
 	}
+
 
 	"CODE_STATS_0"
 	{
@@ -107,7 +96,7 @@
 	"CODE_STATS_8"
 	{
 		"#format"		"{1:d}"
-		"ru"			"Убил Танков: {1}"
+		"ru"			"Средний урон Танку: {1}"
 	}
 
 
@@ -120,424 +109,402 @@
 	"CODE_STATS_10"
 	{
 		"#format"		"{1:d}"
-		"ru"			"Убил Курильщиков (В голову): {1}"
+		"ru"			"Убил Особых заражённых (В голову): {1}"
 	}
 
 	"CODE_STATS_11"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Толстяков (В голову): {1}"
-	}
-
-	"CODE_STATS_12"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Охотников (В голову): {1}"
-	}
-
-	"CODE_STATS_13"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Плевальщиц (В голову): {1}"
-	}
-
-	"CODE_STATS_14"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Жокеев (В голову): {1}"
-	}
-
-	"CODE_STATS_15"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Громил (В голову): {1}"
-	}
-
-	"CODE_STATS_16"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Ведьм (В голову): {1}"
-	}
-
-	"CODE_STATS_17"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Убил Ведьм (Один выстрел): {1}"
 	}
 
 
-	"CODE_STATS_18"
+	"CODE_STATS_12"
 	{
 		"#format"		"{1:d}"
-		"ru"			"Убил из SMG: {1}"
+		"ru"			"Стрелял: {1}"
 	}
 
-	"CODE_STATS_19"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из SMG silenced: {1}"
-	}
-
-	"CODE_STATS_20"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из MP5: {1}"
-	}
-
-	"CODE_STATS_21"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из M16: {1}"
-	}
-
-	"CODE_STATS_22"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из Desert: {1}"
-	}
-
-	"CODE_STATS_23"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из AK47: {1}"
-	}
-
-	"CODE_STATS_24"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из SG552: {1}"
-	}
-
-	"CODE_STATS_25"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из M60: {1}"
-	}
-
-	"CODE_STATS_26"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из Hunting: {1}"
-	}
-
-	"CODE_STATS_27"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из Military: {1}"
-	}
-
-	"CODE_STATS_28"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из AWP: {1}"
-	}
-
-	"CODE_STATS_29"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из Scout: {1}"
-	}
-
-	"CODE_STATS_30"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из Pump: {1}"
-	}
-
-	"CODE_STATS_31"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из Chrome: {1}"
-	}
-
-	"CODE_STATS_32"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из Автодробовика: {1}"
-	}
-
-	"CODE_STATS_33"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из Spas: {1}"
-	}
-
-	"CODE_STATS_34"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из Пистолета: {1}"
-	}
-
-	"CODE_STATS_35"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из Магнума: {1}"
-	}
-
-	"CODE_STATS_36"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил из Гранатомёта: {1}"
-	}
-
-	"CODE_STATS_37"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Катаной: {1}"
-	}
-
-	"CODE_STATS_38"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Топором: {1}"
-	}
-
-	"CODE_STATS_39"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Мачете: {1}"
-	}
-
-	"CODE_STATS_40"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Ножом: {1}"
-	}
-
-	"CODE_STATS_41"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Пилой: {1}"
-	}
-
-	"CODE_STATS_42"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Лопатой: {1}"
-	}
-
-	"CODE_STATS_43"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Вилами: {1}"
-	}
-
-	"CODE_STATS_44"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Клюшкой: {1}"
-	}
-
-	"CODE_STATS_45"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Гитарой: {1}"
-	}
-
-	"CODE_STATS_46"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Тонфой: {1}"
-	}
-
-	"CODE_STATS_47"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Бейсбольной битой: {1}"
-	}
-
-	"CODE_STATS_48"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Битой для крикета: {1}"
-	}
-
-	"CODE_STATS_49"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Сковородой: {1}"
-	}
-
-	"CODE_STATS_50"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Ломом: {1}"
-	}
-
-
-	"CODE_STATS_51"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Бомбой: {1}"
-	}
-
-	"CODE_STATS_52"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил Молотовым: {1}"
-	}
-
-	"CODE_STATS_53"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Убил без оружия (Искл.): {1}"
-	}
-
-
-	"CODE_STATS_54"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Использовал Таблеток: {1}"
-	}
-
-	"CODE_STATS_55"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Использовал Адреналина: {1}"
-	}
-
-	"CODE_STATS_56"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Использовал Аптечек: {1}"
-	}
-
-	"CODE_STATS_57"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Был вылечен кем-то: {1}"
-	}
-
-	"CODE_STATS_58"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Лечился сам: {1}"
-	}
-
-	"CODE_STATS_59"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Лечил кого-то: {1}"
-	}
-
-	"CODE_STATS_60"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Возродил кого-то: {1}"
-	}
-
-	"CODE_STATS_61"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Возрожден кем-то: {1}"
-	}
-
-	"CODE_STATS_62"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Использовал Молотовых: {1}"
-	}
-
-	"CODE_STATS_63"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Использовал Бомб: {1}"
-	}
-
-	"CODE_STATS_64"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Использовал Рвоту толстяка: {1}"
-	}
-
-	"CODE_STATS_65"
-	{
-		"#format"		"{1:d}"
-		"ru"			"Совершил выстрелов: {1}"
-	}
-
-	"CODE_STATS_66"
+	"CODE_STATS_13"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Попал: {1}"
 	}
 
-	"CODE_STATS_67"
+	"CODE_STATS_14"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Спас кого-то: {1}"
 	}
 
-	"CODE_STATS_68"
+	"CODE_STATS_15"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Спасён кем-то: {1}"
 	}
 
-	"CODE_STATS_69"
+	"CODE_STATS_16"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Получил урона от заражённых: {1}"
 	}
 
-	"CODE_STATS_70"
+	"CODE_STATS_17"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Нанёс урона заражённым: {1}"
 	}
 
-	"CODE_STATS_71"
+	"CODE_STATS_18"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Нанёс урона танку: {1}"
+	}
+
+	"CODE_STATS_19"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Убил союзников: {1}"
 	}
 
-	"CODE_STATS_72"
+	"CODE_STATS_20"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Убил заражённых: {1}"
 	}
 
-	"CODE_STATS_73"
+	"CODE_STATS_21"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Был выведен из строя: {1}"
 	}
 
-	"CODE_STATS_74"
+	"CODE_STATS_22"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Умер выжившим: {1}"
 	}
 
 
-	"CODE_STATS_75"
+	"CODE_STATS_23"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Получено урона от выживших: {1}"
 	}
 
-	"CODE_STATS_76"
+	"CODE_STATS_24"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Нанесено урона выжившим: {1}"
 	}
 
-	"CODE_STATS_77"
+	"CODE_STATS_25"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Убил выживших: {1}"
 	}
 
-	"CODE_STATS_78"
+	"CODE_STATS_26"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Вывел из строя выживших: {1}"
 	}
 
-	"CODE_STATS_79"
+	"CODE_STATS_27"
 	{
 		"#format"		"{1:d}"
 		"ru"			"Умер заражённым: {1}"
+	}
+
+
+	"CODE_STATS_28"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Использовал Таблеток: {1}"
+	}
+
+	"CODE_STATS_29"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Использовал Адреналина: {1}"
+	}
+
+	"CODE_STATS_30"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Использовал Аптечек: {1}"
+	}
+
+	"CODE_STATS_31"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Был вылечен кем-то: {1}"
+	}
+
+	"CODE_STATS_32"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Лечился сам: {1}"
+	}
+
+	"CODE_STATS_33"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Лечил кого-то: {1}"
+	}
+
+	"CODE_STATS_34"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Возродил кого-то: {1}"
+	}
+
+	"CODE_STATS_35"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Возрожден кем-то: {1}"
+	}
+
+
+	"CODE_STATS_36"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из SMG: {1}"
+	}
+
+	"CODE_STATS_37"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из SMG silenced: {1}"
+	}
+
+	"CODE_STATS_38"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из MP5: {1}"
+	}
+
+	"CODE_STATS_39"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из Pump: {1}"
+	}
+
+	"CODE_STATS_40"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из Chrome: {1}"
+	}
+
+	"CODE_STATS_41"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из Scout: {1}"
+	}
+
+	"CODE_STATS_42"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из M16: {1}"
+	}
+
+	"CODE_STATS_43"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из Desert: {1}"
+	}
+
+	"CODE_STATS_44"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из AK47: {1}"
+	}
+
+	"CODE_STATS_45"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из SG552: {1}"
+	}
+
+	"CODE_STATS_46"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из Hunting: {1}"
+	}
+
+	"CODE_STATS_47"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из Military: {1}"
+	}
+
+	"CODE_STATS_48"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из AWP: {1}"
+	}
+
+	"CODE_STATS_49"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из Автодробовика: {1}"
+	}
+
+	"CODE_STATS_50"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из Spas: {1}"
+	}
+
+	"CODE_STATS_51"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из Магнума: {1}"
+	}
+
+	"CODE_STATS_52"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из Пистолета: {1}"
+	}
+
+	"CODE_STATS_53"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из M60: {1}"
+	}
+
+	"CODE_STATS_54"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил из Гранатомёта: {1}"
+	}
+
+	"CODE_STATS_55"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Катаной: {1}"
+	}
+
+	"CODE_STATS_56"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Топором: {1}"
+	}
+
+	"CODE_STATS_57"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Мачете: {1}"
+	}
+
+	"CODE_STATS_58"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Ножом: {1}"
+	}
+
+	"CODE_STATS_59"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Пилой: {1}"
+	}
+
+	"CODE_STATS_60"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Лопатой: {1}"
+	}
+
+	"CODE_STATS_61"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Вилами: {1}"
+	}
+
+	"CODE_STATS_62"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Клюшкой: {1}"
+	}
+
+	"CODE_STATS_63"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Гитарой: {1}"
+	}
+
+	"CODE_STATS_64"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Тонфой: {1}"
+	}
+
+	"CODE_STATS_65"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Бейсбольной битой: {1}"
+	}
+
+	"CODE_STATS_66"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Битой для крикета: {1}"
+	}
+
+	"CODE_STATS_67"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Сковородой: {1}"
+	}
+
+	"CODE_STATS_68"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Ломом: {1}"
+	}
+
+
+	"CODE_STATS_69"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Бомбой: {1}"
+	}
+
+	"CODE_STATS_70"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил Молотовым: {1}"
+	}
+
+	"CODE_STATS_71"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Убил без оружия (Искл.): {1}"
+	}
+
+
+	"CODE_STATS_72"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Использовал Молотовых: {1}"
+	}
+
+	"CODE_STATS_73"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Использовал Бомб: {1}"
+	}
+
+	"CODE_STATS_74"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Использовал Рвоту толстяка: {1}"
+	}
+
+	"CODE_STATS_75"
+	{
+		"#format"		"{1:d}"
+		"ru"			"Встречал танка: {1}"
 	}
 }

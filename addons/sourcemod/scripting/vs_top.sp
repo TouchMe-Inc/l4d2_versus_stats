@@ -55,7 +55,8 @@ public void OnAllPluginsLoaded()
 {
 	g_bVersusStatsAvailable = LibraryExists(LIB_VERSUS_STATS);
 
-	if (g_bVersusStatsAvailable) {
+	if (g_bVersusStatsAvailable)
+	{
 		Database db = ConnectDatabase();
 		LoadTopPlayers(db);
 		delete db;
@@ -120,6 +121,26 @@ public void OnPluginStart()
 {
 	InitTranslations();
 	InitCmds();
+	HookEvent("versus_round_start", Event_RoundStart);
+}
+
+/**
+  * Round start event.
+  *
+  * @params  				see events.inc > HookEvent.
+  *
+  * @noreturn
+  */
+public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast) 
+{
+	if (g_bVersusStatsAvailable)
+	{
+		Database db = ConnectDatabase();
+		LoadTopPlayers(db);
+		delete db;
+	}
+
+	return Plugin_Continue;
 }
 
 /**

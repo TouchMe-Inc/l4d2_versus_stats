@@ -33,7 +33,7 @@ The plugin adds the ability to view the rank and statistics of the player.
 `!rankstats <name|#userid>` - Show stats player
 
 ### What statistics will be displayed?
-`configs/vs_rankstats.ini` contains the [codestats](https://github.com/TouchMe-Inc/l4d2_versus_stats/blob/v2/addons/sourcemod/scripting/include/versus_stats.inc) of all items that will be displayed.
+`configs/vs_rankstats.ini` contains the [codestats](https://github.com/TouchMe-Inc/l4d2_versus_stats/blob/main/addons/sourcemod/scripting/include/versus_stats.inc) of all items that will be displayed.
 
 ## Module vs_top
 The plugin adds the ability to view the best players.

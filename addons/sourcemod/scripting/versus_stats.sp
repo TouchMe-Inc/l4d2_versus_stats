@@ -73,7 +73,7 @@ public Plugin myinfo = {
 
 // Other
 #define HOUR                    3600
-#define LIB_VERSUS_STATS        "versus_stats"
+
 
 // Macros
 #define IS_VALID_CLIENT(%1)     (%1 > 0 && %1 <= MaxClients)
@@ -129,7 +129,9 @@ ConVar
 	g_hMinRankedHours = null;
 
 int
-	g_iSurvivorLimit = 4,
+	g_iMetTankId = 0,
+	g_iSurvivorLimit = 0,
+	g_iMaxLastVisit = 0,
 	g_iPlayedTimeStartAt[MAXPLAYERS + 1] = {0, ...};
 
 float
@@ -138,6 +140,7 @@ float
 StringMap
 	g_tWeaponNames = null;
 
+int tankid
 
 /**
   * Global event. Called when all plugins loaded.
@@ -212,7 +215,7 @@ public APLRes AskPluginLoad2(Handle myself, bool bLate, char[] sErr, int iErrLen
 	g_bLate = bLate;
 
 	InitNatives();
-	RegPluginLibrary(LIB_VERSUS_STATS);
+	RegPluginLibrary("versus_stats");
 
 	return APLRes_Success;
 }
@@ -263,7 +266,8 @@ any Native_GetMinRankedHours(Handle plugin, int numParams)
 }
 
 /**
- * Called when the plugin is fully initialized and all known external references are resolved.
+ * Called when the plugin is fully initialized and all known external
+ * references are resolved.
  * 
  * @noreturn
  */
@@ -274,7 +278,7 @@ public void OnPluginStart()
 	InitEvents();
 	InitDatabase();
 
-	if (g_bLate) 
+	if (g_bLate)
 	{
 		for (int iClient = 1; iClient <= MaxClients; iClient++) 
 		{
@@ -295,6 +299,12 @@ public void OnPluginEnd()
 	}
 }
 
+/**
+ * Initializing a weapon map whose key is the name of the weapon and whose 
+ * value is weapon_id.
+ * 
+ * @noreturn
+ */
 void InitWeaponNamesTrie()
 {
 	char sWeaponNames[][] =
@@ -331,23 +341,23 @@ void InitWeaponNamesTrie()
  */
 void InitEvents() 
 {
-	HookEvent("versus_round_start",		Event_RoundStart);
-	HookEvent("round_end",			Event_RoundEnd);
-	HookEvent("player_changename",		Event_ChangeName);
-	HookEvent("player_team",		Event_PlayerTeam);
+	HookEvent("versus_round_start", Event_RoundStart);
+	HookEvent("round_end", Event_RoundEnd);
+	HookEvent("player_changename", Event_ChangeName);
+	HookEvent("player_team", Event_PlayerTeam);
 
-	HookEvent("player_incapacitated",	Event_PlayerIncapacitated);
-	HookEvent("pills_used",			Event_PillsUsed);
-	HookEvent("adrenaline_used",		Event_AdrenalineUsed);
-	HookEvent("heal_success",		Event_HealSuccess);
-	HookEvent("defibrillator_used",		Event_DefibrillatorUsed);
-	HookEvent("revive_success",		Event_ReviveSuccess);
-	HookEvent("weapon_fire",		Event_WeaponFire);
-	HookEvent("infected_death",		Event_InfectedDeath);
-	HookEvent("witch_killed",		Event_WitchKilled);
-	HookEvent("tank_spawn",		Event_TankSpawn);
-	HookEvent("player_death",		Event_PlayerDeath);
-	HookEvent("player_hurt",		Event_PlayerHurt);
+	HookEvent("player_incapacitated", Event_PlayerIncapacitated);
+	HookEvent("pills_used", Event_PillsUsed);
+	HookEvent("adrenaline_used", Event_AdrenalineUsed);
+	HookEvent("heal_success", Event_HealSuccess);
+	HookEvent("defibrillator_used", Event_DefibrillatorUsed);
+	HookEvent("revive_success", Event_ReviveSuccess);
+	HookEvent("weapon_fire", Event_WeaponFire);
+	HookEvent("infected_death", Event_InfectedDeath);
+	HookEvent("witch_killed", Event_WitchKilled);
+	HookEvent("tank_spawn", Event_TankSpawn);
+	HookEvent("player_death", Event_PlayerDeath);
+	HookEvent("player_hurt", Event_PlayerHurt);
 }
 
 /**
@@ -357,7 +367,7 @@ void InitEvents()
   *
   * @noreturn
   */
-public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast) 
+public Action Event_RoundStart(Event event, const char[] name, bool bDontBroadcast) 
 {
 	if (!g_bReadyUpAvailable)
 	{
@@ -384,7 +394,7 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
 /**
  * Round end event.
  */
-public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) 
+public Action Event_RoundEnd(Event event, const char[] name, bool bDontBroadcast) 
 {
 	if (g_bRoundIsLive)
 	{
@@ -409,7 +419,7 @@ public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 /**
  * Player change his name.
  */
-public Action Event_ChangeName(Event event, char[] event_name, bool dontBroadcast)
+public Action Event_ChangeName(Event event, char[] sEventName, bool bDontBroadcast)
 {
 	int iClient = GetClientOfUserId(event.GetInt("userid"));
 
@@ -430,7 +440,7 @@ public Action Event_ChangeName(Event event, char[] event_name, bool dontBroadcas
 /**
  * Player change his team.
  */
-public Action Event_PlayerTeam(Event event, char[] event_name, bool dontBroadcast)
+public Action Event_PlayerTeam(Event event, char[] sEventName, bool bDontBroadcast)
 {
 	int iClient = GetClientOfUserId(event.GetInt("userid"));
 
@@ -471,7 +481,7 @@ public Action Timer_PlayerTeam(Handle hTimer)
 /**
  * Survivor shoots.
  */
-public Action Event_WeaponFire(Event event, char[] event_name, bool dontBroadcast)
+public Action Event_WeaponFire(Event event, char[] sEventName, bool bDontBroadcast)
 {
 	if (CanRecordStats() == false) {
 		return Plugin_Continue;
@@ -504,7 +514,7 @@ public Action Event_WeaponFire(Event event, char[] event_name, bool dontBroadcas
 /**
  * The survivor has become incapacitated.
  */
-public Action Event_PlayerIncapacitated(Event event, char[] event_name, bool dontBroadcast)
+public Action Event_PlayerIncapacitated(Event event, char[] sEventName, bool bDontBroadcast)
 {
 	if (CanRecordStats() == false) {
 		return Plugin_Continue;
@@ -522,7 +532,7 @@ public Action Event_PlayerIncapacitated(Event event, char[] event_name, bool don
 /**
  * Surivivor used Pills.
  */
-public Action Event_PillsUsed(Event event, char[] event_name, bool dontBroadcast)
+public Action Event_PillsUsed(Event event, char[] sEventName, bool bDontBroadcast)
 {
 	if (CanRecordStats() == false) {
 		return Plugin_Continue;
@@ -539,7 +549,7 @@ public Action Event_PillsUsed(Event event, char[] event_name, bool dontBroadcast
 /**
  * Surivivor used Adrenaline.
  */
-public Action Event_AdrenalineUsed(Event event, char[] event_name, bool dontBroadcast)
+public Action Event_AdrenalineUsed(Event event, char[] sEventName, bool bDontBroadcast)
 {
 	if (CanRecordStats() == false) {
 		return Plugin_Continue;
@@ -555,7 +565,7 @@ public Action Event_AdrenalineUsed(Event event, char[] event_name, bool dontBroa
 /**
  * Survivor has been cured.
  */
-public Action Event_HealSuccess(Event event, char[] event_name, bool dontBroadcast)
+public Action Event_HealSuccess(Event event, char[] sEventName, bool bDontBroadcast)
 {
 	if (CanRecordStats() == false) {
 		return Plugin_Continue;
@@ -571,7 +581,7 @@ public Action Event_HealSuccess(Event event, char[] event_name, bool dontBroadca
 		g_pPlayers[iClient].AddStats(SURVIVOR_HEAL, 1);
 		g_pPlayers[iTarget].AddStats(SURVIVOR_HEALED, 1);
 	}
-	
+
 	else {
 		g_pPlayers[iClient].AddStats(SURVIVOR_SELF_HEALED, 1);
 	}
@@ -582,7 +592,7 @@ public Action Event_HealSuccess(Event event, char[] event_name, bool dontBroadca
 /**
  * Surivivor used Defibrillator.
  */
-public Action Event_DefibrillatorUsed(Event event, char[] event_name, bool dontBroadcast)
+public Action Event_DefibrillatorUsed(Event event, char[] sEventName, bool bDontBroadcast)
 {
 	if (CanRecordStats() == false) {
 		return Plugin_Continue;
@@ -600,7 +610,7 @@ public Action Event_DefibrillatorUsed(Event event, char[] event_name, bool dontB
 /**
  * Survivor has been revived.
  */
-public Action Event_ReviveSuccess(Event event, char[] event_name, bool dontBroadcast)
+public Action Event_ReviveSuccess(Event event, char[] sEventName, bool bDontBroadcast)
 {
 	if (CanRecordStats() == false) {
 		return Plugin_Continue;
@@ -618,7 +628,7 @@ public Action Event_ReviveSuccess(Event event, char[] event_name, bool dontBroad
 /**
  * Surivivor Killed Common Infected.
  */
-public Action Event_InfectedDeath(Event event, char[] event_name, bool dontBroadcast)
+public Action Event_InfectedDeath(Event event, char[] sEventName, bool bDontBroadcast)
 {
 	if (CanRecordStats() == false) {
 		return Plugin_Continue;
@@ -633,7 +643,7 @@ public Action Event_InfectedDeath(Event event, char[] event_name, bool dontBroad
 	int iWeaponId = event.GetInt("weapon_id");
 
 	AddWeaponKill(iKiller, iWeaponId);
-	
+
 	g_pPlayers[iKiller].AddStats(SURVIVOR_K_CI, 1);
 
 	bool bHeadShot = event.GetBool("headshot");
@@ -648,7 +658,7 @@ public Action Event_InfectedDeath(Event event, char[] event_name, bool dontBroad
 /**
  * Surivivor Killed Witch.
  */
-public Action Event_WitchKilled(Event event, char[] event_name, bool dontBroadcast)
+public Action Event_WitchKilled(Event event, char[] sEventName, bool bDontBroadcast)
 {
 	if (CanRecordStats() == false) {
 		return Plugin_Continue;
@@ -674,9 +684,17 @@ public Action Event_WitchKilled(Event event, char[] event_name, bool dontBroadca
 /**
  * Surivivor met Tank.
  */
-public Action Event_TankSpawn(Event event, char[] event_name, bool dontBroadcast)
+public Action Event_TankSpawn(Event event, char[] sEventName, bool bDontBroadcast)
 {
 	if (CanRecordStats() == false) {
+		return Plugin_Continue;
+	}
+
+	int iMetTankId = event.GetInt("tankid");
+
+	if (g_iMetTankId != iMetTankId) {
+		g_iMetTankId = iMetTankId;
+	} else {
 		return Plugin_Continue;
 	}
 
@@ -695,7 +713,7 @@ public Action Event_TankSpawn(Event event, char[] event_name, bool dontBroadcast
 /**
  * Registers murder/death. Support all playable classes (Hunter, Smoker, Boomer, Tank, Survivors).
  */
-public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast) 
+public Action Event_PlayerDeath(Event event, const char[] name, bool bDontBroadcast) 
 {
 	if (CanRecordStats() == false) {
 		return Plugin_Continue;
@@ -754,7 +772,7 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 /**
  * Registers existing/caused damage.
  */
-public Action Event_PlayerHurt(Event event, char[] event_name, bool dontBroadcast)
+public Action Event_PlayerHurt(Event event, char[] sEventName, bool bDontBroadcast)
 {
 	if (CanRecordStats() == false) {
 		return Plugin_Continue;
@@ -808,6 +826,7 @@ void InitCvars()
 	g_iSurvivorLimit = g_hSurvivorLimit.IntValue;
 
 	g_hMaxLastVisit = CreateConVar("vs_max_last_visit", "2592000", "The maximum time since the last visit that a record will be found in the database", FCVAR_NOTIFY);
+	g_iMaxLastVisit = g_hSurvivorLimit.IntValue;
 
 	g_hMinRankedHours = CreateConVar("vs_min_ranked_hours", "3.0", "Minimum number of hours to display player statistics", FCVAR_NOTIFY);
 	g_hMinRankedHours.AddChangeHook(OnMinRankedHoursChanged);
@@ -1014,7 +1033,7 @@ bool CreateTable(Database db)
 void ClearDatabase(Database db)
 {
 	char sQuery[128];
-	Format(sQuery, sizeof(sQuery), "DELETE FROM vs_players WHERE `last_visit`<%d;", (GetTime() - g_hMaxLastVisit.IntValue));
+	Format(sQuery, sizeof(sQuery), "DELETE FROM vs_players WHERE `last_visit`<%d;", (GetTime() - g_iMaxLastVisit));
 
 	SQL_LockDatabase(db);
 
@@ -1142,7 +1161,7 @@ void SavePlayerData(int iClient)
 
 void SavePlayerThread(Handle owner, Handle hndl, const char[] error, int iClient)
 {
-	if (hndl == null) 
+	if (hndl == null)
 	{
 		LogError("SavePlayerThread failed! Reason: %s", error);
 		return;
@@ -1204,7 +1223,7 @@ void AddWeaponKill(int iClient, int iWeaponId)
 }
 
 /**
- * Helper.
+ * Player Pts Calculation.
  */
 float CalculateRating(Player pTargetPlayer) 
 {
@@ -1214,9 +1233,14 @@ float CalculateRating(Player pTargetPlayer)
 		return 0.0;
 	}
 
-	// <> Magic number <>
-	float fPositive = float(pTargetPlayer.stats[SURVIVOR_KILL] + pTargetPlayer.stats[INFECTED_INCAPACITATE] * 2 + pTargetPlayer.stats[INFECTED_KILL] * 6);
-	float fNegative = float(pTargetPlayer.stats[SURVIVOR_DEATH] * 4 + pTargetPlayer.stats[SURVIVOR_INCAPACITATED] * 2 + pTargetPlayer.stats[SURVIVOR_TEAMKILL] * 16);
+	#define INFECTED_INCAPACITATE_COST  2
+	#define INFECTED_KILL_COST          6
+	#define SURVIVOR_DEATH_COST         4
+	#define SURVIVOR_INCAPACITATED_COST 2
+	#define SURVIVOR_TEAMKILL_COST      16
+
+	float fPositive = float(pTargetPlayer.stats[SURVIVOR_KILL] + pTargetPlayer.stats[INFECTED_INCAPACITATE] * INFECTED_INCAPACITATE_COST + pTargetPlayer.stats[INFECTED_KILL] * INFECTED_KILL_COST);
+	float fNegative = float(pTargetPlayer.stats[SURVIVOR_DEATH] * 4 + pTargetPlayer.stats[SURVIVOR_INCAPACITATED] * SURVIVOR_INCAPACITATED_COST + pTargetPlayer.stats[SURVIVOR_TEAMKILL] * SURVIVOR_TEAMKILL_COST);
 	float fRating = (fPositive - fNegative) / (fPlayedHours);
 
 	return fRating > 0.0 ? fRating : 0.0;
@@ -1224,7 +1248,7 @@ float CalculateRating(Player pTargetPlayer)
 
 void PreparationAvg(Player pTargetPlayer) 
 {
-	if (pTargetPlayer.stats[SURVIVOR_MET_TANK]) {
+	if (pTargetPlayer.stats[SURVIVOR_MET_TANK] > 0) { // Division by zero
 		pTargetPlayer.stats[SURVIVOR_AVG_DMG_TANK] = pTargetPlayer.stats[SURVIVOR_DMG_TANK] / pTargetPlayer.stats[SURVIVOR_MET_TANK];
 	}	
 }

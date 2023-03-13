@@ -118,6 +118,7 @@ Player
 
 bool
 	g_bLate = false,
+	g_bGamemodeAvailable = false,
 	g_bReadyUpAvailable = false,
 	g_bRoundIsLive = false,
 	g_bFullTeam = false;
@@ -139,8 +140,6 @@ float
 
 StringMap
 	g_tWeaponNames = null;
-
-int tankid
 
 /**
   * Global event. Called when all plugins loaded.
@@ -826,7 +825,7 @@ void InitCvars()
 	g_iSurvivorLimit = g_hSurvivorLimit.IntValue;
 
 	g_hMaxLastVisit = CreateConVar("vs_max_last_visit", "2592000", "The maximum time since the last visit that a record will be found in the database", FCVAR_NOTIFY);
-	g_iMaxLastVisit = g_hSurvivorLimit.IntValue;
+	g_iMaxLastVisit = g_hMaxLastVisit.IntValue;
 
 	g_hMinRankedHours = CreateConVar("vs_min_ranked_hours", "3.0", "Minimum number of hours to display player statistics", FCVAR_NOTIFY);
 	g_hMinRankedHours.AddChangeHook(OnMinRankedHoursChanged);
@@ -886,7 +885,11 @@ public void OnConfigsExecuted()
 void CheckGameMode(const char[] sGameMode)
 {
 	if (!StrEqual(sGameMode, "versus", false) && !StrEqual(sGameMode, "mutation12", false)) {
-		SetFailState("Unsupported mode %s.", sGameMode);
+		g_bGamemodeAvailable = true;
+	}
+
+	else {
+		g_bGamemodeAvailable = false;
 	}
 }
 
@@ -979,7 +982,7 @@ void StopPlayedTime()
 }
 
 bool CanRecordStats() {
-	return g_bRoundIsLive && g_bFullTeam;
+	return g_bGamemodeAvailable && g_bRoundIsLive && g_bFullTeam;
 }
 
 bool CheckDatabaseDriver(Database db) 

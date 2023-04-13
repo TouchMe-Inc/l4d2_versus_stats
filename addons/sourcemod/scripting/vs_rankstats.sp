@@ -2,30 +2,33 @@
 #pragma newdecls                required
 
 #include <sourcemod>
-#include <sdktools>
 #include <colors>
 
 #undef REQUIRE_PLUGIN
 #include <versus_stats>
-#define LIB_VERSUS_STATS        "versus_stats"
+#define REQUIRE_PLUGIN
 
 
 public Plugin myinfo = { 
 	name = "VersusStatsRankstats",
 	author = "TouchMe",
-	description = "Versus mode statistics",
-	version = "1.0 (versus_stats v" ... VERSUS_STATS_VERSION ... ")"
+	description = "Displaying statistics as a menu",
+	version = "build_0001",
+	url = "https://github.com/TouchMe-Inc/l4d2_versus_stats"
 };
 
 
+// Libs
+#define LIB_VERSUS_STATS        "versus_stats"
+
 // Other
 #define PER_PAGE                7
-#define HOUR                    3600
 #define TRANSLATIONS            "vs_rankstats.phrases"
 #define CONFIG_FILEPATH         "configs/vs_rankstats.ini"
 
 // Macros
 #define IS_VALID_CLIENT(%1)     (%1 > 0 && %1 <= MaxClients)
+
 
 ArrayList
 	g_aViewStats = null;
@@ -40,8 +43,6 @@ int
 
 /**
   * Global event. Called when all plugins loaded.
-  *
-  * @noreturn
   */
 public void OnAllPluginsLoaded() {
 	g_bVersusStatsAvailable = LibraryExists(LIB_VERSUS_STATS);
@@ -51,8 +52,6 @@ public void OnAllPluginsLoaded() {
   * Global event. Called when a library is removed.
   *
   * @param sName     Library name
-  *
-  * @noreturn
   */
 public void OnLibraryRemoved(const char[] sName) 
 {
@@ -65,8 +64,6 @@ public void OnLibraryRemoved(const char[] sName)
   * Global event. Called when a library is added.
   *
   * @param sName     Library name
-  *
-  * @noreturn
   */
 public void OnLibraryAdded(const char[] sName)
 {
@@ -97,30 +94,7 @@ public APLRes AskPluginLoad2(Handle myself, bool bLate, char[] sErr, int iErrLen
 }
 
 /**
- * Called when the plugin is fully initialized and all known external references are resolved.
- * 
- * @noreturn
- */
-public void OnPluginStart()
-{
-	g_aViewStats = new ArrayList();
-
-	InitTranslations();
-	ReadViewStats();
-	InitCmds();
-}
-
-public void OnPluginEnd()
-{
-	if (g_aViewStats != null) {
-		delete g_aViewStats;
-	}
-}
-
-/**
  * Loads dictionary files. On failure, stops the plugin execution.
- * 
- * @noreturn
  */
 void InitTranslations()
 {
@@ -137,9 +111,26 @@ void InitTranslations()
 }
 
 /**
+ * Called when the plugin is fully initialized and all known external references are resolved.
+ */
+public void OnPluginStart()
+{
+	InitTranslations();
+
+	g_aViewStats = new ArrayList();
+	ReadViewStats();
+	InitCmds();
+}
+
+public void OnPluginEnd()
+{
+	if (g_aViewStats != null) {
+		delete g_aViewStats;
+	}
+}
+
+/**
   * File reader. Opens and reads lines in config/weapon_vote.ini.
-  *
-  * @noreturn
   */
 void ReadViewStats()
 {
@@ -150,15 +141,15 @@ void ReadViewStats()
 		SetFailState("Path %s not found", sPath);
 	}
 
-	File file = OpenFile(sPath, "rt");
-	if (!file) {
-		SetFailState("Could not open file!");
+	File hFile = OpenFile(sPath, "rt");
+	if (!hFile) {
+		SetFailState("Could not open file %s!", sPath);
 	}
 	
-	while (!file.EndOfFile())
+	while (!hFile.EndOfFile())
 	{
 		char sCurLine[255];
-		if (!file.ReadLine(sCurLine, sizeof(sCurLine))) {
+		if (!hFile.ReadLine(sCurLine, sizeof(sCurLine))) {
 			break;
 		}
 		
@@ -166,7 +157,7 @@ void ReadViewStats()
 
 		for (int iChar = 0; iChar < iLineLength; iChar++)
 		{
-			if (sCurLine[iChar] == '/' && iChar != iLineLength - 1 && sCurLine[iChar+1] == '/')
+			if (sCurLine[iChar] == '/' && iChar != iLineLength - 1 && sCurLine[iChar + 1] == '/')
 			{
 				sCurLine[iChar] = '\0';
 				break;
@@ -182,90 +173,77 @@ void ReadViewStats()
 		ParseLine(sCurLine);
 	}
 	
-	file.Close();
+	hFile.Close();
 }
 
 /**
   * File line parser.
   *
-  * @param sLine 			Line. Pattern:
-  *                                        "weapon_*" "*" "sm_*"
-  *
-  * @noreturn
+  * @param sLine 			Line
   */
-void ParseLine(const char[] sLine)
-{ 
+void ParseLine(const char[] sLine) { 
 	g_aViewStats.Push(StringToInt(sLine));
 }
 
 /**
  * Fragment.
- * 
- * @noreturn
  */
 void InitCmds()
 {
-	RegConsoleCmd("sm_rank",	Cmd_ShowRank);
-	RegConsoleCmd("sm_rankstats",	Cmd_ShowRankStats);
+	RegConsoleCmd("sm_rank", Cmd_ShowRank);
+	RegConsoleCmd("sm_rankstats", Cmd_ShowRankStats);
 }
 
 public Action Cmd_ShowRank(int iClient, int iArgs)
 {
-	if (!g_bVersusStatsAvailable) {
+	if (!g_bVersusStatsAvailable || !IS_VALID_CLIENT(iClient)) {
 		return Plugin_Continue;
 	}
 
-	if (IS_VALID_CLIENT(iClient))
+	int iRank = GetClientRank(iClient);
+
+	if (iRank > 0)
 	{
-		int iRank = GetClientRank(iClient);
-
-		if (iRank > 0) {
-			CPrintToChat(iClient, "%T", "RANK", iClient, iRank);
-		}
-
-		else 
-		{
-			float fDeltaTime = GetNeedPlayedTime(iClient);
-
-			if (fDeltaTime == 0.0) {
-				CPrintToChat(iClient, "%T", "RANK_IN_PROGRESS", iClient);
-			} else {
-				CPrintToChat(iClient, "%T", "RANK_NONE", iClient, GetNeedPlayedTime(iClient));
-			}
-		}
+		CPrintToChat(iClient, "%T", "RANK", iClient, iRank);
+		return Plugin_Continue;
 	}
 
-	return Plugin_Handled;
+	float fNeedPlayedTime = GetNeedPlayedTime(iClient);
+
+	if (fNeedPlayedTime == 0.0) {
+		CPrintToChat(iClient, "%T", "RANK_IN_PROGRESS", iClient);
+	} else {
+		CPrintToChat(iClient, "%T", "RANK_NONE", iClient, fNeedPlayedTime);
+	}
+
+	return Plugin_Continue;
 }
 
 public Action Cmd_ShowRankStats(int iClient, int iArgs)
 {
-	if (!g_bVersusStatsAvailable) {
+	if (!g_bVersusStatsAvailable || !IS_VALID_CLIENT(iClient)) {
 		return Plugin_Continue;
 	}
 
-	if (IS_VALID_CLIENT(iClient))
+	int iTarget = iClient;
+
+	if (iArgs > 0)
 	{
-		int iTarget = iClient;
+		char sArg[32];
+		GetCmdArg(1, sArg, sizeof(sArg));
 
-		if (iArgs > 0)
+		iTarget = FindOneTarget(iClient, sArg);
+
+		if (iTarget == -1)
 		{
-			char sArg[32];
-			GetCmdArg(1, sArg, sizeof(sArg));
-
-			iTarget = FindOneTarget(iClient, sArg);
-
-			if (iTarget == -1)
-			{
-				CPrintToChat(iClient, "%T", "RANKSTATS_BAD_ARG", iClient, sArg);
-				return Plugin_Handled;
-			}
+			CPrintToChat(iClient, "%T", "RANKSTATS_BAD_ARG", iClient, sArg);
+			return Plugin_Continue;
 		}
-
-		RankStats(iClient, g_iClientTarget[iClient] = iTarget, g_iClientPage[iClient] = 0);
 	}
 
-	return Plugin_Handled;
+	RankStats(iClient, g_iClientTarget[iClient] = iTarget, g_iClientPage[iClient] = 0);
+
+	return Plugin_Continue;
 }
 
 void RankStats(int iClient, int iTarget, int iPage) 
@@ -343,11 +321,6 @@ public int HandleRankStats(Menu hMenu, MenuAction action, int iClient, int iSele
 	}
 
 	return 0;
-}
-
-float SecToHours(int seconds)
-{
-	return float(seconds) / float(HOUR);
 }
 
 float GetNeedPlayedTime(int iClient) 

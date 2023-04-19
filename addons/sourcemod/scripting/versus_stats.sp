@@ -143,7 +143,6 @@ ConVar
 	g_cvInfectedKillCost = null;
 
 int
-	g_iMetTankId = 0,
 	g_iPlayedTimeStartAt[MAXPLAYERS + 1] = {0, ...};
 
 StringMap
@@ -700,11 +699,9 @@ public Action Event_TankSpawn(Event event, char[] sEventName, bool bDontBroadcas
 		return Plugin_Continue;
 	}
 
-	int iMetTankId = event.GetInt("tankid");
+	int iTank = GetClientOfUserId(event.GetInt("userid"));
 
-	if (g_iMetTankId != iMetTankId) {
-		g_iMetTankId = iMetTankId;
-	} else {
+	if (IsFakeClient(iTank)) {
 		return Plugin_Continue;
 	}
 

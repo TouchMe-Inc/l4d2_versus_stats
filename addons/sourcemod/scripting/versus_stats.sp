@@ -24,6 +24,10 @@ public Plugin myinfo = {
 // Libs
 #define LIB_READY               "readyup"
 
+// Gamemode
+#define GAMEMODE_VERSUS         "versus"
+#define GAMEMODE_VERSUS_REALISM "mutation12"
+
 // Team
 #define TEAM_NONE               0
 #define TEAM_SPECTATOR          1
@@ -41,14 +45,15 @@ public Plugin myinfo = {
 #define ZC_TANK                 8
 
 // SQL Fragment
-#define CREATE_CODE_STATS       "code_stats_%d int(11) UNSIGNED NOT NULL DEFAULT 0,"
-#define CREATE_CODE_STATS_SIZE  53
-#define UPDATE_CODE_STATS       "`code_stats_%d`=%d,"
-#define UPDATE_CODE_STATS_SIZE  30
-#define INSERT_CODE_STATS_COLUMN "code_stats_%d,"
-#define INSERT_CODE_STATS_COLUMN_SIZE 16
-#define INSERT_CODE_STATS_VALUE "%d,"
-#define INSERT_CODE_STATS_VALUE_SIZE 12
+#define CODE_ZERO               "code_0"
+#define CREATE_CODE             "code_%d int(11) UNSIGNED NOT NULL DEFAULT 0,"
+#define CREATE_CODE_SIZE        48
+#define UPDATE_CODE             "`code_%d`=%d,"
+#define UPDATE_CODE_SIZE        32
+#define INSERT_CODE_COLUMN      "code_%d,"
+#define INSERT_CODE_COLUMN_SIZE 12
+#define INSERT_CODE_VALUE       "%d,"
+#define INSERT_CODE_VALUE_SIZE  12
 
 // Weapon id
 #define WID_PISTOL              1
@@ -95,12 +100,14 @@ public Plugin myinfo = {
 #define MIN_RANKED_HOURS        GetConVarFloat(g_cvMinRankedHours)
 #define MIN_RANKED_SEC          RoundFloat(HOUR * MIN_RANKED_HOURS)
 
-#define I_INCAPACITATE_COST     GetConVarInt(g_cvInfectedIncapacitateCost)
-#define I_KILL_COST             GetConVarInt(g_cvInfectedKillCost)
-#define S_KILL_COST             GetConVarInt(g_cvSurvivorKillCost)
-#define S_DEATH_COST            GetConVarInt(g_cvSurvivorDeathCost)
-#define S_INCAPACITATED_COST    GetConVarInt(g_cvSurvivorIncapacitatedCost)
-#define S_TEAMKILL_COST         GetConVarInt(g_cvSurvivorTeamkillCost)
+#define COST_I_INCAPACITATE     GetConVarFloat(g_cvInfectedIncapacitateCost)
+#define COST_I_KILL             GetConVarFloat(g_cvInfectedKillCost)
+#define COST_S_KILL             GetConVarFloat(g_cvSurvivorKillCost)
+#define COST_S_KILL_CI          GetConVarFloat(g_cvSurvivorKillCICost)
+#define COST_S_DEATH            GetConVarFloat(g_cvSurvivorDeathCost)
+#define COST_S_INCAPACITATED    GetConVarFloat(g_cvSurvivorIncapacitatedCost)
+#define COST_S_TEAMKILL         GetConVarFloat(g_cvSurvivorTeamkillCost)
+
 
 enum struct Player
 {
@@ -111,7 +118,6 @@ enum struct Player
 	int state;
 	int stats[CODE_STATS_SIZE];
 }
-
 
 Player
 	g_tPlayers[MAXPLAYERS + 1];
@@ -124,11 +130,12 @@ bool
 	g_bFullTeam = false;
 
 ConVar
-	g_hGameMode = null,
+	g_cvGameMode = null,
 	g_cvSurvivorLimit = null,
 	g_cvMaxLastVisit = null,
 	g_cvMinRankedHours = null,
 	g_cvSurvivorKillCost = null,
+	g_cvSurvivorKillCICost = null,
 	g_cvSurvivorDeathCost = null,
 	g_cvSurvivorIncapacitatedCost = null,
 	g_cvSurvivorTeamkillCost = null,
@@ -331,8 +338,10 @@ public void OnPluginStart()
  */
 public void OnPluginEnd()
 {
-	if (g_tWeaponNames != null) {
-		delete g_tWeaponNames;
+	if (g_tWeaponNames != null)
+	{
+		CloseHandle(g_tWeaponNames);
+		g_tWeaponNames = null;
 	}
 }
 
@@ -815,18 +824,19 @@ public Action Event_PlayerHurt(Event event, char[] sEventName, bool bDontBroadca
  */
 void InitCvars()
 {
-	(g_hGameMode = FindConVar("mp_gamemode")).AddChangeHook(OnGamemodeChanged);
+	(g_cvGameMode = FindConVar("mp_gamemode")).AddChangeHook(OnGamemodeChanged);
 
 	g_cvSurvivorLimit = FindConVar("survivor_limit");
 	g_cvMaxLastVisit = CreateConVar("vs_max_last_visit", "2592000", "The maximum time since the last visit that a record will be found in the database");
-	g_cvMinRankedHours = CreateConVar("vs_min_ranked_hours", "3.0", "Minimum number of hours to display player statistics");
+	g_cvMinRankedHours = CreateConVar("vs_min_ranked_hours", "12.0", "Minimum number of hours to display player statistics");
 
-	g_cvSurvivorKillCost = CreateConVar("vs_s_kill_cost", "1"),
-	g_cvSurvivorDeathCost = CreateConVar("vs_s_death_cost", "4"),
-	g_cvSurvivorIncapacitatedCost = CreateConVar("vs_s_incapacitated_cost", "2"),
-	g_cvSurvivorTeamkillCost = CreateConVar("vs_s_teamkill_cost", "16"),
-	g_cvInfectedIncapacitateCost = CreateConVar("vs_i_incapacitate_cost", "2"),
-	g_cvInfectedKillCost = CreateConVar("vs_i_kill_cost", "1");
+	g_cvSurvivorKillCost = CreateConVar("vs_s_kill_cost", "1.0"),
+	g_cvSurvivorKillCICost = CreateConVar("vs_s_kill_ci_cost", "0.01"),
+	g_cvSurvivorDeathCost = CreateConVar("vs_s_death_cost", "4.0"),
+	g_cvSurvivorIncapacitatedCost = CreateConVar("vs_s_incapacitated_cost", "2.0"),
+	g_cvSurvivorTeamkillCost = CreateConVar("vs_s_teamkill_cost", "16.0"),
+	g_cvInfectedIncapacitateCost = CreateConVar("vs_i_incapacitate_cost", "2.0"),
+	g_cvInfectedKillCost = CreateConVar("vs_i_kill_cost", "1.0");
 }
 
 /**
@@ -848,7 +858,7 @@ public void OnGamemodeChanged(ConVar convar, const char[] sOldGameMode, const ch
 public void OnConfigsExecuted() 
 {
 	char sGameMode[16];
-	GetConVarString(g_hGameMode, sGameMode, sizeof(sGameMode));
+	GetConVarString(g_cvGameMode, sGameMode, sizeof(sGameMode));
 	g_bGamemodeAvailable = IsVersusMode(sGameMode);
 }
 
@@ -910,8 +920,8 @@ bool AvailableDatabaseDriver(Database db)
  */
 bool CreateTable(Database db)
 {
-	char sStats[CREATE_CODE_STATS_SIZE];
-	char sStatsList[CODE_STATS_SIZE * CREATE_CODE_STATS_SIZE];
+	char sStats[CREATE_CODE_SIZE];
+	char sStatsList[CODE_STATS_SIZE * CREATE_CODE_SIZE];
 
 	char sQuery[300 + sizeof(sStatsList)] = 
 	"CREATE TABLE IF NOT EXISTS vs_players (\
@@ -925,7 +935,7 @@ bool CreateTable(Database db)
 
 	for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++) 
 	{
-		Format(sStats, sizeof(sStats), CREATE_CODE_STATS, iCode);
+		Format(sStats, sizeof(sStats), CREATE_CODE, iCode);
 		StrCat(sStatsList, sizeof(sStatsList), sStats);
 	}
 
@@ -1108,7 +1118,7 @@ void LoadPlayerThread(Handle owner, Handle hndl, const char[] error, int iClient
 			}
 		}
 
-		if (SQL_FieldNameToNum(hndl, "code_stats_0", iColumnNum)) 
+		if (SQL_FieldNameToNum(hndl, CODE_ZERO, iColumnNum)) 
 		{
 			for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++)
 			{
@@ -1133,15 +1143,15 @@ void SavePlayerData(int iClient)
 
 	if (!IsNewPlayer(iClient))
 	{
-		char sStats[UPDATE_CODE_STATS_SIZE];
-		char sStatsList[CODE_STATS_SIZE * UPDATE_CODE_STATS_SIZE];
+		char sStats[UPDATE_CODE_SIZE];
+		char sStatsList[CODE_STATS_SIZE * UPDATE_CODE_SIZE];
 
 		char sQuery[256 + sizeof(sStatsList)];
 		Format(sQuery, sizeof(sQuery), "UPDATE `vs_players` SET `last_name`='%s',`played_time`=%d,`last_visit`=%d,__STATS__`rating`=%f WHERE `id`=%d;", g_tPlayers[iClient].lastName, g_tPlayers[iClient].playedTime, GetTime(), CalculatePlayerRating(iClient), g_tPlayers[iClient].id);
 
 		for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++)
 		{
-			Format(sStats, sizeof(sStats), UPDATE_CODE_STATS, iCode, g_tPlayers[iClient].stats[iCode]);
+			Format(sStats, sizeof(sStats), UPDATE_CODE, iCode, g_tPlayers[iClient].stats[iCode]);
 			StrCat(sStatsList, sizeof(sStatsList), sStats);
 		}
 
@@ -1153,21 +1163,21 @@ void SavePlayerData(int iClient)
 	{
 		char sSteamId[32]; GetClientAuthId(iClient, AuthId_SteamID64, sSteamId, sizeof(sSteamId));
 
-		char sStatsColumn[CODE_STATS_SIZE * INSERT_CODE_STATS_COLUMN_SIZE];
-		char sStatsColumnList[CODE_STATS_SIZE * INSERT_CODE_STATS_COLUMN_SIZE];
+		char sStatsColumn[CODE_STATS_SIZE * INSERT_CODE_COLUMN_SIZE];
+		char sStatsColumnList[CODE_STATS_SIZE * INSERT_CODE_COLUMN_SIZE];
 
-		char sStatsValue[INSERT_CODE_STATS_VALUE_SIZE];
-		char sStatsValueList[CODE_STATS_SIZE * INSERT_CODE_STATS_VALUE_SIZE];
+		char sStatsValue[INSERT_CODE_VALUE_SIZE];
+		char sStatsValueList[CODE_STATS_SIZE * INSERT_CODE_VALUE_SIZE];
  
 		char sQuery[192 + sizeof(sStatsColumnList) + sizeof(sStatsValueList)];
 		Format(sQuery, sizeof(sQuery), "INSERT INTO `vs_players` (`last_name`,`steam_id`,`played_time`,`last_visit`,__STATS_COLUMN__`rating`) VALUES ('%s','%s',%d,%d,__STATS_VALUE__%f);", g_tPlayers[iClient].lastName, sSteamId, g_tPlayers[iClient].playedTime, GetTime(), CalculatePlayerRating(iClient));
 
 		for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++) 
 		{
-			Format(sStatsColumn, sizeof(sStatsColumn), INSERT_CODE_STATS_COLUMN, iCode);
+			Format(sStatsColumn, sizeof(sStatsColumn), INSERT_CODE_COLUMN, iCode);
 			StrCat(sStatsColumnList, sizeof(sStatsColumnList), sStatsColumn);
 
-			Format(sStatsValue, sizeof(sStatsValue), INSERT_CODE_STATS_VALUE, g_tPlayers[iClient].stats[iCode]);
+			Format(sStatsValue, sizeof(sStatsValue), INSERT_CODE_VALUE, g_tPlayers[iClient].stats[iCode]);
 			StrCat(sStatsValueList, sizeof(sStatsValueList), sStatsValue);
 		}
 
@@ -1266,15 +1276,16 @@ float CalculatePlayerRating(int iClient)
 		return 0.0;
 	}
 
-	int iPositive = g_tPlayers[iClient].stats[S_KILL] * S_KILL_COST
-					+ g_tPlayers[iClient].stats[I_INCAPACITATE] * I_INCAPACITATE_COST
-					+ g_tPlayers[iClient].stats[I_KILL] * I_KILL_COST;
+	float fPositive = float(g_tPlayers[iClient].stats[S_K_CI]) * COST_S_KILL_CI
+					+ float(g_tPlayers[iClient].stats[S_KILL]) * COST_S_KILL
+					+ float(g_tPlayers[iClient].stats[I_INCAPACITATE]) * COST_I_INCAPACITATE
+					+ float(g_tPlayers[iClient].stats[I_KILL]) * COST_I_KILL;
 
-	int iNegative = g_tPlayers[iClient].stats[S_DEATH] * S_DEATH_COST 
-					+ g_tPlayers[iClient].stats[S_INCAPACITATED] * S_INCAPACITATED_COST 
-					+ g_tPlayers[iClient].stats[S_TEAMKILL] * S_TEAMKILL_COST;
+	float fNegative = float(g_tPlayers[iClient].stats[S_DEATH]) * COST_S_DEATH 
+					+ float(g_tPlayers[iClient].stats[S_INCAPACITATED]) * COST_S_INCAPACITATED 
+					+ float(g_tPlayers[iClient].stats[S_TEAMKILL]) * COST_S_TEAMKILL;
 
-	float fRating = float(iPositive - iNegative) / (fPlayedHours);
+	float fRating = (fPositive - fNegative) / (fPlayedHours);
 
 	return fRating > 0.0 ? fRating : 0.0;
 }
@@ -1466,5 +1477,5 @@ void GetClientMeleeName(int iClient, char[] sMeleeName, int iLen)
  * @return              Returns true if verus, otherwise false
  */
 bool IsVersusMode(const char[] sGameMode) {
-	return (StrEqual(sGameMode, "versus", false) || StrEqual(sGameMode, "mutation12", false));
+	return (StrEqual(sGameMode, GAMEMODE_VERSUS, false) || StrEqual(sGameMode, GAMEMODE_VERSUS_REALISM, false));
 }

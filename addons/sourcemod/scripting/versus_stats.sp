@@ -1098,9 +1098,9 @@ void LoadPlayerThread(Handle owner, Handle hndl, const char[] sError, int iClien
 				g_tPlayers[iClient].stats[iCode] = SQL_FetchInt(hndl, iColumnNum + iCode);
 			}
 		}
-
-		g_tPlayers[iClient].state = STATE_LOADED;
 	}
+
+	g_tPlayers[iClient].state = STATE_LOADED;
 }
 
 /**

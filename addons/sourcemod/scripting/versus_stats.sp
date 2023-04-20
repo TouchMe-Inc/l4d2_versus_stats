@@ -760,7 +760,7 @@ public Action Event_PlayerHurt(Event event, char[] sEventName, bool bDontBroadca
 
 	int iDamage = event.GetInt("dmg_health");
 	
-	if (iDamage >= 5000) {
+	if (iDamage >= 2500) {
 		return Plugin_Continue;
 	}
 
@@ -783,7 +783,12 @@ public Action Event_PlayerHurt(Event event, char[] sEventName, bool bDontBroadca
 
 		int iZombieClass = GetClientZombieClass(iVictim);
 
-		AddPlayerStats(iAttacker, iZombieClass == ZC_TANK ? S_DMG_TANK : S_DMG, iDamage);
+		if (iZombieClass == ZC_TANK) {
+			AddPlayerStats(iAttacker, S_DMG_TANK, !IsTankIncapacitated(iVictim) ? iDamage : 0);
+		} else {
+			AddPlayerStats(iAttacker, S_DMG, iDamage);
+		}
+		
 		AddPlayerStats(iVictim, I_HURT, iDamage);
 	}
 
@@ -1453,4 +1458,12 @@ void GetClientMeleeName(int iClient, char[] sMeleeName, int iLen)
  */
 bool IsVersusMode(const char[] sGameMode) {
 	return (StrEqual(sGameMode, GAMEMODE_VERSUS, false) || StrEqual(sGameMode, GAMEMODE_VERSUS_REALISM, false));
+}
+
+bool IsIncapacitated(int iClient) {
+	return view_as<bool>(GetEntProp(iClient, Prop_Send, "m_isIncapacitated"));
+}
+
+bool IsTankIncapacitated(int iClient) {
+	return (IsIncapacitated(iClient) || GetClientHealth(iClient) < 1);
 }

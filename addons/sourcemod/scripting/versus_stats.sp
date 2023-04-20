@@ -359,7 +359,7 @@ void InitEvents()
 	HookEvent("defibrillator_used", Event_DefibrillatorUsed);
 	HookEvent("revive_success", Event_ReviveSuccess);
 	HookEvent("weapon_fire", Event_WeaponFire);
-	HookEvent("I_death", Event_InfectedDeath);
+	HookEvent("infected_death", Event_InfectedDeath);
 	HookEvent("witch_killed", Event_WitchKilled);
 	HookEvent("tank_spawn", Event_TankSpawn);
 	HookEvent("player_death", Event_PlayerDeath);

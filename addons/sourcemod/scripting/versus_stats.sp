@@ -16,7 +16,7 @@ public Plugin myinfo = {
 	name = "VersusStats",
 	author = "TouchMe",
 	description = "Versus mode statistics",
-	version = "build_0002",
+	version = "build_0003",
 	url = "https://github.com/TouchMe-Inc/l4d2_versus_stats"
 };
 

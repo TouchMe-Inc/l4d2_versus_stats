@@ -863,6 +863,8 @@ Database ConnectDatabase()
 	
 	if (SQL_CheckConfig(DATABASE)) {
 		db = SQL_Connect(DATABASE, true, error, sizeof(error));
+	} else {
+		SetFailState("Configuration " ... DATABASE ... " not found in databases.cfg.");
 	}
 
 	if (db == null) {

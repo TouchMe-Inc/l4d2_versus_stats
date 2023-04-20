@@ -16,7 +16,7 @@ public Plugin myinfo = {
 	name = "VersusStats",
 	author = "TouchMe",
 	description = "Versus mode statistics",
-	version = "build_0001",
+	version = "build_0002",
 	url = "https://github.com/TouchMe-Inc/l4d2_versus_stats"
 };
 
@@ -47,13 +47,13 @@ public Plugin myinfo = {
 // SQL Fragment
 #define CODE_ZERO               "code_0"
 #define CREATE_CODE             "code_%d int(11) UNSIGNED NOT NULL DEFAULT 0,"
-#define CREATE_CODE_SIZE        48
+#define CREATE_CODE_LENGTH      48
 #define UPDATE_CODE             "`code_%d`=%d,"
-#define UPDATE_CODE_SIZE        32
+#define UPDATE_CODE_LENGTH      32
 #define INSERT_CODE_COLUMN      "code_%d,"
-#define INSERT_CODE_COLUMN_SIZE 12
+#define INSERT_CODE_COLUMN_LENGTH 12
 #define INSERT_CODE_VALUE       "%d,"
-#define INSERT_CODE_VALUE_SIZE  12
+#define INSERT_CODE_VALUE_LENGTH 16
 
 // Weapon id
 #define WID_PISTOL              1
@@ -351,7 +351,6 @@ void InitEvents()
 {
 	HookEvent("versus_round_start", Event_RoundStart);
 	HookEvent("round_end", Event_RoundEnd);
-	HookEvent("player_changename", Event_ChangeName);
 	HookEvent("player_team", Event_PlayerTeam);
 	HookEvent("player_incapacitated", Event_PlayerIncapacitated);
 	HookEvent("pills_used", Event_PillsUsed);
@@ -410,31 +409,6 @@ public Action Event_RoundEnd(Event event, const char[] name, bool bDontBroadcast
 		SavePlayerData(iClient);
 		UpdatePlayerRank(iClient);
 	}
-
-	return Plugin_Continue;
-}
-
-/**
- * Player change his name.
- */
-public Action Event_ChangeName(Event event, char[] sEventName, bool bDontBroadcast)
-{
-	if (!g_bGamemodeAvailable) {
-		return Plugin_Continue;
-	}
-
-	int iClient = GetClientOfUserId(event.GetInt("userid"));
-
-	if (!IS_VALID_CLIENT(iClient) || !IS_REAL_CLIENT(iClient)) {
-		return Plugin_Continue;
-	}
-
-	char sNewName[32];
-	event.GetString("newname", sNewName, sizeof(sNewName));
-
-	Database db = ConnectDatabase();
-	SQL_EscapeString(db, sNewName, g_tPlayers[iClient].lastName,  sizeof(g_tPlayers[].lastName));
-	delete db;
 
 	return Plugin_Continue;
 }
@@ -828,7 +802,7 @@ void InitCvars()
 	g_cvMinRankedHours = CreateConVar("vs_min_ranked_hours", "12.0", "Minimum number of hours to display player statistics");
 
 	g_cvSurvivorKillCost = CreateConVar("vs_s_kill_cost", "1.0"),
-	g_cvSurvivorKillCICost = CreateConVar("vs_s_kill_ci_cost", "0.01"),
+	g_cvSurvivorKillCICost = CreateConVar("vs_s_kill_ci_cost", "0.02"),
 	g_cvSurvivorDeathCost = CreateConVar("vs_s_death_cost", "4.0"),
 	g_cvSurvivorIncapacitatedCost = CreateConVar("vs_s_incapacitated_cost", "2.0"),
 	g_cvSurvivorTeamkillCost = CreateConVar("vs_s_teamkill_cost", "16.0"),
@@ -917,8 +891,8 @@ bool AvailableDatabaseDriver(Database db)
  */
 bool CreateTable(Database db)
 {
-	char sStats[CREATE_CODE_SIZE];
-	char sStatsList[CODE_STATS_SIZE * CREATE_CODE_SIZE];
+	char sStats[CREATE_CODE_LENGTH];
+	char sStatsList[CODE_STATS_SIZE * CREATE_CODE_LENGTH];
 
 	char sQuery[300 + sizeof(sStatsList)] = 
 	"CREATE TABLE IF NOT EXISTS vs_players (\
@@ -1080,8 +1054,8 @@ void LoadPlayerData(int iClient)
 {
 	Database db = ConnectDatabase();
 
-	char sSteamId[32]; GetClientAuthId(iClient, AuthId_SteamID64, sSteamId, sizeof(sSteamId));
-	char sClientName[32]; GetClientName(iClient, sClientName, sizeof(sClientName));
+	char sSteamId[MAX_AUTHID_LENGTH]; GetClientAuthId(iClient, AuthId_SteamID64, sSteamId, sizeof(sSteamId));
+	char sClientName[MAX_NAME_LENGTH]; GetClientName(iClient, sClientName, sizeof(sClientName));
 	SQL_EscapeString(db, sClientName, g_tPlayers[iClient].lastName,  sizeof(g_tPlayers[].lastName));
 
 	char sQuery[256];
@@ -1090,11 +1064,11 @@ void LoadPlayerData(int iClient)
 	SQL_TQuery(db, LoadPlayerThread, sQuery, iClient);
 }
 
-void LoadPlayerThread(Handle owner, Handle hndl, const char[] error, int iClient)
+void LoadPlayerThread(Handle owner, Handle hndl, const char[] sError, int iClient)
 {
 	if (hndl == null)
 	{
-		LogError("LoadPlayerThread failed! Reason: %s", error);
+		LogError("LoadPlayerThread failed! Reason: %s", sError);
 		return;
 	}
 
@@ -1122,9 +1096,9 @@ void LoadPlayerThread(Handle owner, Handle hndl, const char[] error, int iClient
 				g_tPlayers[iClient].stats[iCode] = SQL_FetchInt(hndl, iColumnNum + iCode);
 			}
 		}
-	}
 
-	g_tPlayers[iClient].state = STATE_LOADED;
+		g_tPlayers[iClient].state = STATE_LOADED;
+	}
 }
 
 /**
@@ -1140,10 +1114,11 @@ void SavePlayerData(int iClient)
 
 	if (!IsNewPlayer(iClient))
 	{
-		char sStats[UPDATE_CODE_SIZE];
-		char sStatsList[CODE_STATS_SIZE * UPDATE_CODE_SIZE];
+		// Build Update query
+		char sStats[UPDATE_CODE_LENGTH];
+		char sStatsList[CODE_STATS_SIZE * UPDATE_CODE_LENGTH];
 
-		char sQuery[256 + sizeof(sStatsList)];
+		char sQuery[384 + sizeof(sStatsList)];
 		Format(sQuery, sizeof(sQuery), "UPDATE `vs_players` SET `last_name`='%s',`played_time`=%d,`last_visit`=%d,__STATS__`rating`=%f WHERE `id`=%d;", g_tPlayers[iClient].lastName, g_tPlayers[iClient].playedTime, GetTime(), CalculatePlayerRating(iClient), g_tPlayers[iClient].id);
 
 		for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++)
@@ -1158,15 +1133,16 @@ void SavePlayerData(int iClient)
 
 	else
 	{
-		char sSteamId[32]; GetClientAuthId(iClient, AuthId_SteamID64, sSteamId, sizeof(sSteamId));
+		char sSteamId[MAX_AUTHID_LENGTH]; GetClientAuthId(iClient, AuthId_SteamID64, sSteamId, sizeof(sSteamId));
 
-		char sStatsColumn[CODE_STATS_SIZE * INSERT_CODE_COLUMN_SIZE];
-		char sStatsColumnList[CODE_STATS_SIZE * INSERT_CODE_COLUMN_SIZE];
+		// Build Insert query
+		char sStatsColumn[CODE_STATS_SIZE * INSERT_CODE_COLUMN_LENGTH];
+		char sStatsColumnList[CODE_STATS_SIZE * INSERT_CODE_COLUMN_LENGTH];
 
-		char sStatsValue[INSERT_CODE_VALUE_SIZE];
-		char sStatsValueList[CODE_STATS_SIZE * INSERT_CODE_VALUE_SIZE];
+		char sStatsValue[INSERT_CODE_VALUE_LENGTH];
+		char sStatsValueList[CODE_STATS_SIZE * INSERT_CODE_VALUE_LENGTH];
  
-		char sQuery[192 + sizeof(sStatsColumnList) + sizeof(sStatsValueList)];
+		char sQuery[256 + sizeof(sStatsColumnList) + sizeof(sStatsValueList)];
 		Format(sQuery, sizeof(sQuery), "INSERT INTO `vs_players` (`last_name`,`steam_id`,`played_time`,`last_visit`,__STATS_COLUMN__`rating`) VALUES ('%s','%s',%d,%d,__STATS_VALUE__%f);", g_tPlayers[iClient].lastName, sSteamId, g_tPlayers[iClient].playedTime, GetTime(), CalculatePlayerRating(iClient));
 
 		for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++) 
@@ -1185,11 +1161,11 @@ void SavePlayerData(int iClient)
 	}
 }
 
-void SavePlayerThread(Handle owner, Handle hndl, const char[] error, int iClient)
+void SavePlayerThread(Handle owner, Handle hndl, const char[] sError, int iClient)
 {
 	if (hndl == null)
 	{
-		LogError("SavePlayerThread failed! Reason: %s", error);
+		LogError("SavePlayerThread failed! Reason: %s", sError);
 		return;
 	}
 
@@ -1267,7 +1243,7 @@ void AddWeaponKill(int iClient, int iWeaponId)
  */
 float CalculatePlayerRating(int iClient) 
 {
-	float fPlayedHours = SecToHours(g_tPlayers[iClient].playedTime + 1);
+	float fPlayedHours = SecToHours(g_tPlayers[iClient].playedTime);
 
 	if (fPlayedHours < MIN_RANKED_HOURS) {
 		return 0.0;

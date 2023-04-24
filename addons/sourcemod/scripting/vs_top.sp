@@ -2,30 +2,33 @@
 #pragma newdecls                required
 
 #include <sourcemod>
-#include <sdktools>
 #include <colors>
 
 #undef REQUIRE_PLUGIN
 #include <versus_stats>
-#define LIB_VERSUS_STATS        "versus_stats"
+#define REQUIRE_PLUGIN
 
 
 public Plugin myinfo = { 
 	name = "VersusStatsTop",
 	author = "TouchMe",
-	description = "Versus mode statistics",
-	version = "1.0 (versus_stats v" ... VERSUS_STATS_VERSION ... ")"
+	description = "Top players display",
+	version = "build_0001",
+	url = "https://github.com/TouchMe-Inc/l4d2_versus_stats"
 };
 
+
+//Libs
+#define LIB_VERSUS_STATS        "versus_stats"
 
 // Other
 #define TOP_LIMIT               50
 #define PER_PAGE                5
-#define HOUR                    3600
 #define TRANSLATIONS            "vs_top.phrases"
 
 // Macros
 #define IS_VALID_CLIENT(%1)     (%1 > 0 && %1 <= MaxClients)
+
 
 enum struct Player
 {
@@ -48,27 +51,15 @@ int
 
 /**
   * Global event. Called when all plugins loaded.
-  *
-  * @noreturn
   */
-public void OnAllPluginsLoaded()
-{
+public void OnAllPluginsLoaded() {
 	g_bVersusStatsAvailable = LibraryExists(LIB_VERSUS_STATS);
-
-	if (g_bVersusStatsAvailable)
-	{
-		Database db = ConnectDatabase();
-		LoadTopPlayers(db);
-		delete db;
-	}
 }
 
 /**
   * Global event. Called when a library is removed.
   *
   * @param sName     Library name
-  *
-  * @noreturn
   */
 public void OnLibraryRemoved(const char[] sName) 
 {
@@ -81,8 +72,6 @@ public void OnLibraryRemoved(const char[] sName)
   * Global event. Called when a library is added.
   *
   * @param sName     Library name
-  *
-  * @noreturn
   */
 public void OnLibraryAdded(const char[] sName)
 {
@@ -113,40 +102,7 @@ public APLRes AskPluginLoad2(Handle myself, bool bLate, char[] sErr, int iErrLen
 }
 
 /**
- * Called when the plugin is fully initialized and all known external references are resolved.
- * 
- * @noreturn
- */
-public void OnPluginStart()
-{
-	InitTranslations();
-	InitCmds();
-	HookEvent("versus_round_start", Event_RoundStart);
-}
-
-/**
-  * Round start event.
-  *
-  * @params  				see events.inc > HookEvent.
-  *
-  * @noreturn
-  */
-public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast) 
-{
-	if (g_bVersusStatsAvailable)
-	{
-		Database db = ConnectDatabase();
-		LoadTopPlayers(db);
-		delete db;
-	}
-
-	return Plugin_Continue;
-}
-
-/**
  * Loads dictionary files. On failure, stops the plugin execution.
- * 
- * @noreturn
  */
 void InitTranslations()
 {
@@ -163,59 +119,71 @@ void InitTranslations()
 }
 
 /**
- * Fragment.
- * 
- * @noreturn
+ * Called when the plugin is fully initialized and all known external references are resolved.
  */
-void InitCmds()
+public void OnPluginStart()
 {
+	InitTranslations();
 	RegConsoleCmd("sm_top",	Cmd_ShowTop);
+	HookEvent("round_start", Event_RoundStart);
+}
+
+/**
+  * Round start event.
+  */
+public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast) 
+{
+	if (g_bVersusStatsAvailable) {
+		LoadTopPlayers();
+	}
+
+	return Plugin_Continue;
 }
 
 public Action Cmd_ShowTop(int iClient, int iArgs)
 {
-	if (!g_bVersusStatsAvailable) {
+	if (!g_bVersusStatsAvailable || !IS_VALID_CLIENT(iClient)) {
 		return Plugin_Continue;
 	}
 
-	if (IS_VALID_CLIENT(iClient))
+	if (g_iTopSize == 0) 
 	{
-		if (g_iTopSize == 0) {
-			CPrintToChat(iClient, "%T", "TOP_EMPTY", iClient);
-			return Plugin_Handled;
-		}
-
-		g_iClientPage[iClient] = 0;
-
-		if (iArgs > 0)
-		{
-			char sArg[32];
-			GetCmdArg(1, sArg, sizeof(sArg));
-			
-			int iOffset = StringToInt(sArg); 
-			
-			if (iOffset % PER_PAGE == 0) {
-				g_iClientPage[iClient] = (iOffset / PER_PAGE);
-			}
-			
-			else
-			{
-				CPrintToChat(iClient, "%T", "TOP_BAD_ARG", iClient, sArg);
-				return Plugin_Handled;
-			}
-		}
-
-		if (g_iClientPage[iClient] > GetMaxPage()) {
-			g_iClientPage[iClient] = GetMaxPage();
-		}
-
-		Top(iClient, g_iClientPage[iClient]);
+		CPrintToChat(iClient, "%T", "TOP_EMPTY", iClient);
+		return Plugin_Continue;
 	}
+
+	g_iClientPage[iClient] = 0;
+
+	if (iArgs > 0)
+	{
+		char sArg[32];
+		GetCmdArg(1, sArg, sizeof(sArg));
+
+		int iOffset = StringToInt(sArg); 
+
+		if (iOffset % PER_PAGE == 0) {
+			g_iClientPage[iClient] = (iOffset / PER_PAGE);
+		}
+			
+		else
+		{
+			CPrintToChat(iClient, "%T", "TOP_BAD_ARG", iClient, sArg);
+			return Plugin_Continue;
+		}
+	}
+
+	int iMaxPage = RoundToFloor(float(g_iTopSize) / float(PER_PAGE));
+
+	if (g_iClientPage[iClient] > iMaxPage) {
+		g_iClientPage[iClient] = iMaxPage;
+	}
+
+	ShowTop(iClient, g_iClientPage[iClient]);
 
 	return Plugin_Handled;
 }
 
-void Top(int iClient, int iPage) 
+void ShowTop(int iClient, int iPage) 
 {
 	Panel hPanel = new Panel();
 
@@ -273,13 +241,13 @@ public int HandleTop(Menu hMenu, MenuAction action, int iClient, int iSelectedIn
 		{
 			case 1: {
 				if (++ g_iClientPage[iClient] * PER_PAGE < g_iTopSize) {
-					Top(iClient, g_iClientPage[iClient]);
+					ShowTop(iClient, g_iClientPage[iClient]);
 				}
 			}
 
 			case 2: {
 				if (-- g_iClientPage[iClient] >= 0) {
-					Top(iClient, g_iClientPage[iClient]);
+					ShowTop(iClient, g_iClientPage[iClient]);
 				}
 			}
 		}
@@ -288,17 +256,10 @@ public int HandleTop(Menu hMenu, MenuAction action, int iClient, int iSelectedIn
 	return 0;
 }
 
-float SecToHours(int seconds)
+void LoadTopPlayers()
 {
-	return float(seconds) / float(HOUR);
-}
+	Database db = GetVersusStatsDatabase();
 
-int GetMaxPage() {
-	return RoundToFloor(float(g_iTopSize) / float(PER_PAGE));
-}
-
-void LoadTopPlayers(Database db)
-{
 	char sQuery[160];
 	Format(sQuery, sizeof(sQuery), "SELECT `last_name`, `played_time`, `rating` FROM vs_players WHERE `played_time`>%d AND `rating`>0 ORDER BY `rating` DESC LIMIT %d;", RoundFloat(HOUR * GetMinRankedHours()), TOP_LIMIT);
 
@@ -324,7 +285,7 @@ void LoadTopPlayers(Database db)
 			if (SQL_FieldNameToNum(dbResult, "rating", iColumnNum)) {
 				g_iTopList[iPos].rating = SQL_FetchFloat(dbResult, iColumnNum);
 			}
-			
+
 			g_iTopList[iPos].rank = ++ iPos;
 		}
 
@@ -341,4 +302,6 @@ void LoadTopPlayers(Database db)
 	}
 
 	SQL_UnlockDatabase(db);
+
+	delete db;
 }

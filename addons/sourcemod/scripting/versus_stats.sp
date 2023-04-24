@@ -7,7 +7,7 @@
 
 #undef REQUIRE_PLUGIN
 #include <readyup>
-#define LIB_READY               "readyup"
+#define REQUIRE_PLUGIN
 
 #include "include/versus_stats.inc"
 
@@ -16,9 +16,17 @@ public Plugin myinfo = {
 	name = "VersusStats",
 	author = "TouchMe",
 	description = "Versus mode statistics",
-	version = VERSUS_STATS_VERSION
+	version = "build_0003",
+	url = "https://github.com/TouchMe-Inc/l4d2_versus_stats"
 };
 
+
+// Libs
+#define LIB_READY               "readyup"
+
+// Gamemode
+#define GAMEMODE_VERSUS         "versus"
+#define GAMEMODE_VERSUS_REALISM "mutation12"
 
 // Team
 #define TEAM_NONE               0
@@ -37,14 +45,15 @@ public Plugin myinfo = {
 #define ZC_TANK                 8
 
 // SQL Fragment
-#define CREATE_CODE_STATS_TEMP         "code_stats_%d int(11) UNSIGNED NOT NULL DEFAULT 0,"
-#define CREATE_CODE_STATS_TEMP_SIZE    53
-#define UPDATE_CODE_STATS_TEMP         "`code_stats_%d`=%d,"
-#define UPDATE_CODE_STATS_TEMP_SIZE    30
-#define INSERT_CODE_STATS_COLUMN_TEMP  "code_stats_%d,"
-#define INSERT_CODE_STATS_COLUMN_TEMP_SIZE 16
-#define INSERT_CODE_STATS_VALUE_TEMP   "%d,"
-#define INSERT_CODE_STATS_VALUE_TEMP_SIZE 12
+#define CODE_ZERO               "code_0"
+#define CREATE_CODE             "code_%d int(11) UNSIGNED NOT NULL DEFAULT 0,"
+#define CREATE_CODE_LENGTH      48
+#define UPDATE_CODE             "`code_%d`=%d,"
+#define UPDATE_CODE_LENGTH      32
+#define INSERT_CODE_COLUMN      "code_%d,"
+#define INSERT_CODE_COLUMN_LENGTH 12
+#define INSERT_CODE_VALUE       "%d,"
+#define INSERT_CODE_VALUE_LENGTH 16
 
 // Weapon id
 #define WID_PISTOL              1
@@ -72,8 +81,7 @@ public Plugin myinfo = {
 #define WID_M60                 37
 
 // Other
-#define HOUR                    3600
-
+#define DATABASE                "versus_stats"
 
 // Macros
 #define IS_VALID_CLIENT(%1)     (%1 > 0 && %1 <= MaxClients)
@@ -87,6 +95,19 @@ public Plugin myinfo = {
 #define IS_VALID_SURVIVOR(%1)   (IS_VALID_CLIENT(%1) && IS_SURVIVOR(%1))
 #define IS_VALID_INFECTED(%1)   (IS_VALID_CLIENT(%1) && IS_INFECTED(%1))
 
+#define TEAM_SIZE               GetConVarInt(g_cvSurvivorLimit)
+#define MAX_LAST_VISIT          GetConVarInt(g_cvMaxLastVisit)
+#define MIN_RANKED_HOURS        GetConVarFloat(g_cvMinRankedHours)
+#define MIN_RANKED_SEC          RoundFloat(HOUR * MIN_RANKED_HOURS)
+
+#define COST_I_INCAPACITATE     GetConVarFloat(g_cvInfectedIncapacitateCost)
+#define COST_I_KILL             GetConVarFloat(g_cvInfectedKillCost)
+#define COST_S_KILL             GetConVarFloat(g_cvSurvivorKillCost)
+#define COST_S_KILL_CI          GetConVarFloat(g_cvSurvivorKillCICost)
+#define COST_S_DEATH            GetConVarFloat(g_cvSurvivorDeathCost)
+#define COST_S_INCAPACITATED    GetConVarFloat(g_cvSurvivorIncapacitatedCost)
+#define COST_S_TEAMKILL         GetConVarFloat(g_cvSurvivorTeamkillCost)
+
 
 enum struct Player
 {
@@ -94,27 +115,12 @@ enum struct Player
 	char lastName[65];
 	int playedTime;
 	int rank;
+	int state;
 	int stats[CODE_STATS_SIZE];
-	int STATE;
-
-	void AddStats(int iCode, int iValue)
-	{
-		this.stats[iCode] += iValue;
-	}
-
-	void AddPlayedTime(int iValue)
-	{
-		this.playedTime += iValue;
-	}
-
-	bool IsNew() {
-		return this.id == 0;
-	}
 }
 
-
 Player
-	g_pPlayers[MAXPLAYERS + 1];
+	g_tPlayers[MAXPLAYERS + 1];
 
 bool
 	g_bLate = false,
@@ -124,27 +130,27 @@ bool
 	g_bFullTeam = false;
 
 ConVar
-	g_hGameMode = null,
-	g_hSurvivorLimit = null,
-	g_hMaxLastVisit = null,
-	g_hMinRankedHours = null;
+	g_cvGameMode = null,
+	g_cvSurvivorLimit = null,
+	g_cvMaxLastVisit = null,
+	g_cvMinRankedHours = null,
+	g_cvSurvivorKillCost = null,
+	g_cvSurvivorKillCICost = null,
+	g_cvSurvivorDeathCost = null,
+	g_cvSurvivorIncapacitatedCost = null,
+	g_cvSurvivorTeamkillCost = null,
+	g_cvInfectedIncapacitateCost = null,
+	g_cvInfectedKillCost = null;
 
 int
-	g_iMetTankId = 0,
-	g_iSurvivorLimit = 0,
-	g_iMaxLastVisit = 0,
 	g_iPlayedTimeStartAt[MAXPLAYERS + 1] = {0, ...};
-
-float
-	g_fMinRankedHours = 0.0;
 
 StringMap
 	g_tWeaponNames = null;
 
+
 /**
   * Global event. Called when all plugins loaded.
-  *
-  * @noreturn
   */
 public void OnAllPluginsLoaded() {
 	g_bReadyUpAvailable = LibraryExists(LIB_READY);
@@ -154,8 +160,6 @@ public void OnAllPluginsLoaded() {
   * Global event. Called when a library is removed.
   *
   * @param sName     Library name
-  *
-  * @noreturn
   */
 public void OnLibraryRemoved(const char[] sName) 
 {
@@ -168,8 +172,6 @@ public void OnLibraryRemoved(const char[] sName)
   * Global event. Called when a library is added.
   *
   * @param sName     Library name
-  *
-  * @noreturn
   */
 public void OnLibraryAdded(const char[] sName)
 {
@@ -181,8 +183,6 @@ public void OnLibraryAdded(const char[] sName)
 /**
   * @requared readyup
   * Global event. Called when all players are ready.
-  *
-  * @noreturn
   */
 public void OnRoundIsLive() 
 {
@@ -213,69 +213,115 @@ public APLRes AskPluginLoad2(Handle myself, bool bLate, char[] sErr, int iErrLen
 
 	g_bLate = bLate;
 
-	InitNatives();
-	RegPluginLibrary("versus_stats");
-
-	return APLRes_Success;
-}
-
-void InitNatives()
-{
 	CreateNative("GetClientRank", Native_GetClientRank);
 	CreateNative("GetClientRating", Native_GetClientRating);
 	CreateNative("GetClientStats", Native_GetClientStats);
 	CreateNative("GetClientPlayedTime", Native_GetClientPlayedTime);
 	CreateNative("GetClientState", Native_GetClientState);
 	CreateNative("GetMinRankedHours", Native_GetMinRankedHours);
+	CreateNative("GetVersusStatsDatabase", Native_GetVersusStatsDatabase);
+	RegPluginLibrary("versus_stats");
+
+	return APLRes_Success;
 }
 
+/**
+ * Player rank in statistics.
+ * 
+ * @param hPlugin       Handle to the plugin
+ * @param iParams       Number of parameters
+ * @return              Return rank
+ */
 int Native_GetClientRank(Handle plugin, int numParams)
 {
 	int iClient = GetNativeCell(1);
-	return g_pPlayers[iClient].rank;
+	return g_tPlayers[iClient].rank;
 }
 
+/**
+ * Get calculated player rating.
+ * 
+ * @param hPlugin       Handle to the plugin
+ * @param iParams       Number of parameters
+ * @return              Return rating
+ */
 any Native_GetClientRating(Handle plugin, int numParams)
 {
 	int iClient = GetNativeCell(1);
-	return CalculateRating(g_pPlayers[iClient]);
+	return CalculatePlayerRating(iClient);
 }
 
+/**
+ * Get the numeric value of a statistics parameter.
+ * 
+ * @param hPlugin       Handle to the plugin
+ * @param iParams       Number of parameters
+ * @return              Return stats
+ */
 int Native_GetClientStats(Handle plugin, int numParams)
 {
 	int iClient = GetNativeCell(1), iCode = GetNativeCell(2);
-	return g_pPlayers[iClient].stats[iCode];
+	return g_tPlayers[iClient].stats[iCode];
 }
 
+/**
+ * Get statistics recording time.
+ * 
+ * @param hPlugin       Handle to the plugin
+ * @param iParams       Number of parameters
+ * @return              Return played time
+ */
 int Native_GetClientPlayedTime(Handle plugin, int numParams)
 {
 	int iClient = GetNativeCell(1);
-	return g_pPlayers[iClient].playedTime;
+	return g_tPlayers[iClient].playedTime;
 }
 
+/**
+ * Getting status about loading statistics.
+ * 
+ * @param hPlugin       Handle to the plugin
+ * @param iParams       Number of parameters
+ * @return              Return player state
+ */
 int Native_GetClientState(Handle plugin, int numParams)
 {
 	int iClient = GetNativeCell(1);
-	return g_pPlayers[iClient].STATE;
+	return g_tPlayers[iClient].state;
 }
 
-any Native_GetMinRankedHours(Handle plugin, int numParams)
-{
-	return g_fMinRankedHours;
+/**
+ * Getting the minimum number of hours to start calculating rank.
+ * 
+ * @param hPlugin       Handle to the plugin
+ * @param iParams       Number of parameters
+ * @return              Return min randed hours
+ */
+any Native_GetMinRankedHours(Handle plugin, int numParams) {
+	return MIN_RANKED_HOURS;
+}
+
+/**
+ * Accessing the database to run queries.
+ * 
+ * @param hPlugin       Handle to the plugin
+ * @param iParams       Number of parameters
+ * @return              Return Database connection
+ */
+any Native_GetVersusStatsDatabase(Handle plugin, int numParams) {
+	return ConnectDatabase();
 }
 
 /**
  * Called when the plugin is fully initialized and all known external
  * references are resolved.
- * 
- * @noreturn
  */
 public void OnPluginStart()
 {
-	InitWeaponNamesTrie();
 	InitCvars();
 	InitEvents();
 	InitDatabase();
+	InitWeaponNameTrie();
 
 	if (g_bLate)
 	{
@@ -288,63 +334,24 @@ public void OnPluginStart()
 
 /**
  * Called when the plugin is about to be unloaded.
- * 
- * @noreturn
  */
 public void OnPluginEnd()
 {
-	if (g_tWeaponNames != null) {
-		delete g_tWeaponNames;
-	}
-}
-
-/**
- * Initializing a weapon map whose key is the name of the weapon and whose 
- * value is weapon_id.
- * 
- * @noreturn
- */
-void InitWeaponNamesTrie()
-{
-	char sWeaponNames[][] =
+	if (g_tWeaponNames != null)
 	{
-		"", "pistol", "smg",
-		"pumpshotgun", "autoshotgun", "rifle",
-		"hunting_rifle", "smg_silenced", "shotgun_chrome",
-		"rifle_desert", "sniper_military", "shotgun_spas",
-		"", "", "",
-		"", "", "",
-		"", "melee", "chainsaw",
-		"grenade_launcher", "", "",
-		"", "", "rifle_ak47",
-		"", "", "",
-		"", "", "pistol_magnum",
-		"smg_mp5", "rifle_sg552", "sniper_awp",
-		"sniper_scout", "rifle_m60"
-	};
-
-	g_tWeaponNames = CreateTrie();
-
-	for (int i = 0; i < sizeof(sWeaponNames); i++)
-	{
-		if (sWeaponNames[i][0] != '\0') {
-			SetTrieValue(g_tWeaponNames, sWeaponNames[i], i);
-		}
+		CloseHandle(g_tWeaponNames);
+		g_tWeaponNames = null;
 	}
 }
 
 /**
  * Fragment.
- * 
- * @noreturn
  */
 void InitEvents() 
 {
 	HookEvent("versus_round_start", Event_RoundStart);
 	HookEvent("round_end", Event_RoundEnd);
-	HookEvent("player_changename", Event_ChangeName);
 	HookEvent("player_team", Event_PlayerTeam);
-
 	HookEvent("player_incapacitated", Event_PlayerIncapacitated);
 	HookEvent("pills_used", Event_PillsUsed);
 	HookEvent("adrenaline_used", Event_AdrenalineUsed);
@@ -360,14 +367,14 @@ void InitEvents()
 }
 
 /**
-  * Round start event.
-  *
-  * @params  				see events.inc > HookEvent.
-  *
-  * @noreturn
-  */
+ * Round start event.
+ */
 public Action Event_RoundStart(Event event, const char[] name, bool bDontBroadcast) 
 {
+	if (!g_bGamemodeAvailable) {
+		return Plugin_Continue;
+	}
+
 	if (!g_bReadyUpAvailable)
 	{
 		g_bRoundIsLive = true;
@@ -377,16 +384,6 @@ public Action Event_RoundStart(Event event, const char[] name, bool bDontBroadca
 		}
 	}
 
-	for (int iClient = 1; iClient <= MaxClients; iClient++) 
-	{
-		if (!IS_REAL_CLIENT(iClient)) {
-			continue;
-		}
-
-		// Update rank (async)
-		UpdatePlayerRank(iClient);
-	}
-
 	return Plugin_Continue;
 }
 
@@ -394,44 +391,24 @@ public Action Event_RoundStart(Event event, const char[] name, bool bDontBroadca
  * Round end event.
  */
 public Action Event_RoundEnd(Event event, const char[] name, bool bDontBroadcast) 
-{
-	if (g_bRoundIsLive)
-	{
-		g_bRoundIsLive = false;
-
-		StopPlayedTime();
-
-		for (int iClient = 1; iClient <= MaxClients; iClient++) 
-		{
-			if (!IS_REAL_CLIENT(iClient)) {
-				continue;
-			}
-
-			SavePlayerData(iClient);
-		}
-	}
-	
-
-	return Plugin_Continue;
-}
-
-/**
- * Player change his name.
- */
-public Action Event_ChangeName(Event event, char[] sEventName, bool bDontBroadcast)
-{
-	int iClient = GetClientOfUserId(event.GetInt("userid"));
-
-	if (!IS_VALID_CLIENT(iClient) || !IS_REAL_CLIENT(iClient)) {
+{	
+	if (!g_bGamemodeAvailable || !g_bRoundIsLive) {
 		return Plugin_Continue;
 	}
 
-	char sNewName[32];
-	event.GetString("newname", sNewName, sizeof(sNewName));
+	g_bRoundIsLive = false;
 
-	Database db = ConnectDatabase();
-	SQL_EscapeString(db, sNewName, g_pPlayers[iClient].lastName,  sizeof(g_pPlayers[].lastName));
-	delete db;
+	StopPlayedTime();
+
+	for (int iClient = 1; iClient <= MaxClients; iClient++) 
+	{
+		if (!IS_REAL_CLIENT(iClient)) {
+			continue;
+		}
+
+		SavePlayerData(iClient);
+		UpdatePlayerRank(iClient);
+	}
 
 	return Plugin_Continue;
 }
@@ -441,27 +418,35 @@ public Action Event_ChangeName(Event event, char[] sEventName, bool bDontBroadca
  */
 public Action Event_PlayerTeam(Event event, char[] sEventName, bool bDontBroadcast)
 {
+	if (!g_bGamemodeAvailable) {
+		return Plugin_Continue;
+	}
+
 	int iClient = GetClientOfUserId(event.GetInt("userid"));
 
-	if (IS_REAL_CLIENT(iClient))
-	{
-		int iOldTeam = event.GetInt("oldteam");
-		int iNewTeam = event.GetInt("team");
-
-		if (iOldTeam == TEAM_NONE && iNewTeam == TEAM_SPECTATOR) {
-			return Plugin_Continue;
-		}
-
-		CreateTimer(0.1, Timer_PlayerTeam, .flags = TIMER_FLAG_NO_MAPCHANGE);
+	if (!IS_REAL_CLIENT(iClient)) {
+		return Plugin_Continue;
 	}
+
+	int iOldTeam = event.GetInt("oldteam");
+	int iNewTeam = event.GetInt("team");
+
+	if (iOldTeam == TEAM_NONE && iNewTeam == TEAM_SPECTATOR) {
+		return Plugin_Continue;
+	}
+
+	CreateTimer(0.1, Timer_PlayerTeam, .flags = TIMER_FLAG_NO_MAPCHANGE);
 
 	return Plugin_Continue;
 }
 
+/**
+ * Starts a timer for calculating players game statistics.
+ */
 public Action Timer_PlayerTeam(Handle hTimer)
 {
 	bool bFullTeamBeforeCheck = g_bFullTeam;
-	g_bFullTeam = (g_iSurvivorLimit * 2) == GetPlayerCount();
+	g_bFullTeam = (TEAM_SIZE * 2) == GetPlayerCount();
 
 	if (g_bRoundIsLive)
 	{
@@ -488,23 +473,22 @@ public Action Event_WeaponFire(Event event, char[] sEventName, bool bDontBroadca
 
 	int iClient = GetClientOfUserId(event.GetInt("userid"));
 
-	char sWeaponName[32];
-	event.GetString("weapon", sWeaponName, sizeof(sWeaponName));
+	char sWeaponName[32]; event.GetString("weapon", sWeaponName, sizeof(sWeaponName));
 	
 	if (StrEqual(sWeaponName, "molotov", false)) {
-		g_pPlayers[iClient].AddStats(SURVIVOR_TH_MOLOTOV, 1);
+		AddPlayerStats(iClient, S_TH_MOLOTOV, 1);
 	}
 
 	else if (StrEqual(sWeaponName, "pipe_bomb", false)) {
-		g_pPlayers[iClient].AddStats(SURVIVOR_TH_PIPE, 1);
+		AddPlayerStats(iClient, S_TH_PIPE, 1);
 	}
 
 	else if (StrEqual(sWeaponName, "vomitjar", false)) {
-		g_pPlayers[iClient].AddStats(SURVIVOR_TH_VOMITJAR, 1);
+		AddPlayerStats(iClient, S_TH_VOMITJAR, 1);
 	}
 
 	if (sWeaponName[0] != 'm' && g_tWeaponNames.ContainsKey(sWeaponName)) {
-		g_pPlayers[iClient].AddStats(SURVIVOR_SHOT, 1);
+		AddPlayerStats(iClient, S_SHOT, 1);
 	}
 
 	return Plugin_Continue;
@@ -522,8 +506,8 @@ public Action Event_PlayerIncapacitated(Event event, char[] sEventName, bool bDo
 	int iVictim = GetClientOfUserId(event.GetInt("userid"));
 	int iAttacker = GetClientOfUserId(event.GetInt("attacker"));
 
-	g_pPlayers[iVictim].AddStats(SURVIVOR_INCAPACITATED, 1);
-	g_pPlayers[iAttacker].AddStats(INFECTED_INCAPACITATE, 1);
+	AddPlayerStats(iVictim, S_INCAPACITATED, 1);
+	AddPlayerStats(iAttacker, I_INCAPACITATE, 1);
 
 	return Plugin_Continue;
 }
@@ -539,7 +523,7 @@ public Action Event_PillsUsed(Event event, char[] sEventName, bool bDontBroadcas
 
 	int iClient = GetClientOfUserId(event.GetInt("userid"));
 
-	g_pPlayers[iClient].AddStats(SURVIVOR_PILLS, 1);
+	AddPlayerStats(iClient, S_PILLS, 1);
 
 	return Plugin_Continue;
 }
@@ -556,7 +540,7 @@ public Action Event_AdrenalineUsed(Event event, char[] sEventName, bool bDontBro
 
 	int iClient = GetClientOfUserId(event.GetInt("userid"));
 
-	g_pPlayers[iClient].AddStats(SURVIVOR_ADRENALINE, 1);
+	AddPlayerStats(iClient, S_ADRENALINE, 1);
 
 	return Plugin_Continue;
 }
@@ -573,16 +557,16 @@ public Action Event_HealSuccess(Event event, char[] sEventName, bool bDontBroadc
 	int iClient = GetClientOfUserId(event.GetInt("userid"));
 	int iTarget = GetClientOfUserId(event.GetInt("subject"));
 
-	g_pPlayers[iClient].AddStats(SURVIVOR_MEDKIT, 1);
+	AddPlayerStats(iClient, S_MEDKIT, 1);
 
 	if (iClient != iTarget)
 	{
-		g_pPlayers[iClient].AddStats(SURVIVOR_HEAL, 1);
-		g_pPlayers[iTarget].AddStats(SURVIVOR_HEALED, 1);
+		AddPlayerStats(iClient, S_HEAL, 1);
+		AddPlayerStats(iTarget, S_HEALED, 1);
 	}
 
 	else {
-		g_pPlayers[iClient].AddStats(SURVIVOR_SELF_HEALED, 1);
+		AddPlayerStats(iClient, S_SELF_HEALED, 1);
 	}
 
 	return Plugin_Continue;
@@ -600,8 +584,8 @@ public Action Event_DefibrillatorUsed(Event event, char[] sEventName, bool bDont
 	int iClient = GetClientOfUserId(event.GetInt("userid"));
 	int iTarget = GetClientOfUserId(event.GetInt("subject"));
 
-	g_pPlayers[iClient].AddStats(SURVIVOR_DEFIBRILLATE, 1);
-	g_pPlayers[iTarget].AddStats(SURVIVOR_DEFIBRILLATED, 1);
+	AddPlayerStats(iClient, S_DEFIBRILLATE, 1);
+	AddPlayerStats(iTarget, S_DEFIBRILLATED, 1);
 
 	return Plugin_Continue;
 }
@@ -618,8 +602,8 @@ public Action Event_ReviveSuccess(Event event, char[] sEventName, bool bDontBroa
 	int iClient = GetClientOfUserId(event.GetInt("userid"));
 	int iTarget = GetClientOfUserId(event.GetInt("subject"));
 
-	g_pPlayers[iClient].AddStats(SURVIVOR_REVIVE, 1);
-	g_pPlayers[iTarget].AddStats(SURVIVOR_REVIVED, 1);
+	AddPlayerStats(iClient, S_REVIVE, 1);
+	AddPlayerStats(iTarget, S_REVIVED, 1);
 
 	return Plugin_Continue;
 }
@@ -643,12 +627,12 @@ public Action Event_InfectedDeath(Event event, char[] sEventName, bool bDontBroa
 
 	AddWeaponKill(iKiller, iWeaponId);
 
-	g_pPlayers[iKiller].AddStats(SURVIVOR_K_CI, 1);
+	AddPlayerStats(iKiller, S_K_CI, 1);
 
 	bool bHeadShot = event.GetBool("headshot");
 
 	if (bHeadShot) {
-		g_pPlayers[iKiller].AddStats(SURVIVOR_K_CI_HS, 1);
+		AddPlayerStats(iKiller, S_K_CI_HS, 1);
 	}
 
 	return Plugin_Continue;
@@ -669,12 +653,12 @@ public Action Event_WitchKilled(Event event, char[] sEventName, bool bDontBroadc
 		return Plugin_Continue;
 	}
 
-	g_pPlayers[iKiller].AddStats(SURVIVOR_K_WITCH, 1);
+	AddPlayerStats(iKiller, S_K_WITCH, 1);
 
 	bool bOneShot = event.GetBool("oneshot");
 
 	if (bOneShot) {
-		g_pPlayers[iKiller].AddStats(SURVIVOR_K_WITCH_OS, 1);
+		AddPlayerStats(iKiller, S_K_WITCH_OS, 1);
 	}
 	
 	return Plugin_Continue;
@@ -689,11 +673,9 @@ public Action Event_TankSpawn(Event event, char[] sEventName, bool bDontBroadcas
 		return Plugin_Continue;
 	}
 
-	int iMetTankId = event.GetInt("tankid");
+	int iTank = GetClientOfUserId(event.GetInt("userid"));
 
-	if (g_iMetTankId != iMetTankId) {
-		g_iMetTankId = iMetTankId;
-	} else {
+	if (IsFakeClient(iTank)) {
 		return Plugin_Continue;
 	}
 
@@ -703,7 +685,7 @@ public Action Event_TankSpawn(Event event, char[] sEventName, bool bDontBroadcas
 			continue;
 		}
 
-		g_pPlayers[iClient].AddStats(SURVIVOR_MET_TANK, 1);
+		AddPlayerStats(iClient, S_MET_TANK, 1);
 	}
 	
 	return Plugin_Continue;
@@ -719,50 +701,49 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool bDontBroadc
 	}
 
 	int iVictim = GetClientOfUserId(event.GetInt("userid"));
-	int iKiller = GetClientOfUserId(event.GetInt("attacker"));
 
 	if (IS_VALID_INFECTED(iVictim)) {
-		g_pPlayers[iVictim].AddStats(INFECTED_DEATH, 1);
+		AddPlayerStats(iVictim, I_DEATH, 1);
 	}
 	
 	else if (IS_VALID_SURVIVOR(iVictim)) {
-		g_pPlayers[iVictim].AddStats(SURVIVOR_DEATH, 1);
+		AddPlayerStats(iVictim, S_DEATH, 1);
 	}
+
+	int iKiller = GetClientOfUserId(event.GetInt("attacker"));
 
 	if (IS_VALID_SURVIVOR(iKiller) && IS_VALID_INFECTED(iVictim))
 	{
-		char sWeaponName[32];
-		event.GetString("weapon", sWeaponName, sizeof(sWeaponName));
-		
-		int iWeaponId;
-		g_tWeaponNames.GetValue(sWeaponName, iWeaponId);
+		char sWeaponName[32]; event.GetString("weapon", sWeaponName, sizeof(sWeaponName));
+
+		int iWeaponId; g_tWeaponNames.GetValue(sWeaponName, iWeaponId);
 
 		AddWeaponKill(iKiller, iWeaponId);
 		
-		int iZombieClass = GetEntProp(iVictim, Prop_Send, "m_zombieClass");
+		int iZombieClass = GetClientZombieClass(iVictim);
 
 		if (iZombieClass != ZC_TANK)
 		{
 			int iKillCode = GetKillCodeByZombieClass(iZombieClass);
 
-			g_pPlayers[iKiller].AddStats(iKillCode, 1);
-			g_pPlayers[iKiller].AddStats(SURVIVOR_KILL, 1);
+			AddPlayerStats(iKiller, iKillCode, 1);
+			AddPlayerStats(iKiller, S_KILL, 1);
 
 			bool bHeadShot = event.GetBool("headshot");
 
 			if (bHeadShot) {
-				g_pPlayers[iKiller].AddStats(SURVIVOR_K_SI_HS, 1);
+				AddPlayerStats(iKiller, S_K_SI_HS, 1);
 			}
 		}
 	}
 
 	else if(IS_VALID_INFECTED(iKiller) && IS_VALID_SURVIVOR(iVictim))
 	{
-		g_pPlayers[iKiller].AddStats(INFECTED_KILL, 1);
+		AddPlayerStats(iKiller, I_KILL, 1);
 	}
 
 	else if (IS_VALID_SURVIVOR(iKiller) && IS_VALID_SURVIVOR(iVictim)) {
-		g_pPlayers[iKiller].AddStats(SURVIVOR_TEAMKILL, 1);
+		AddPlayerStats(iKiller, S_TEAMKILL, 1);
 	}
 
 	return Plugin_Continue;
@@ -779,7 +760,7 @@ public Action Event_PlayerHurt(Event event, char[] sEventName, bool bDontBroadca
 
 	int iDamage = event.GetInt("dmg_health");
 	
-	if (iDamage >= 5000) {
+	if (iDamage >= 2500) {
 		return Plugin_Continue;
 	}
 
@@ -788,23 +769,27 @@ public Action Event_PlayerHurt(Event event, char[] sEventName, bool bDontBroadca
 
 	if (IS_VALID_SURVIVOR(iVictim) && IS_VALID_INFECTED(iAttacker)) 
 	{
-		g_pPlayers[iAttacker].AddStats(INFECTED_DMG, iDamage);
-		g_pPlayers[iVictim].AddStats(SURVIVOR_HURT, iDamage);
+		AddPlayerStats(iAttacker, I_DMG, iDamage);
+		AddPlayerStats(iVictim, S_HURT, iDamage);
 	}
 
 	else if (IS_VALID_SURVIVOR(iAttacker) && IS_VALID_INFECTED(iVictim))
 	{
-		char sWeaponName[32];
-		event.GetString("weapon", sWeaponName, sizeof(sWeaponName));
+		char sWeaponName[32]; event.GetString("weapon", sWeaponName, sizeof(sWeaponName));
 
 		if (sWeaponName[0] != 'm' && g_tWeaponNames.ContainsKey(sWeaponName)) {
-			g_pPlayers[iAttacker].AddStats(SURVIVOR_HIT, 1);
+			AddPlayerStats(iAttacker, S_HIT, 1);
 		}
 
-		int iZombieClass = GetEntProp(iVictim, Prop_Send, "m_zombieClass");
+		int iZombieClass = GetClientZombieClass(iVictim);
 
-		g_pPlayers[iAttacker].AddStats(iZombieClass == ZC_TANK ? SURVIVOR_DMG_TANK : SURVIVOR_DMG, iDamage);
-		g_pPlayers[iVictim].AddStats(INFECTED_HURT, iDamage);
+		if (iZombieClass == ZC_TANK) {
+			AddPlayerStats(iAttacker, S_DMG_TANK, !IsTankIncapacitated(iVictim) ? iDamage : 0);
+		} else {
+			AddPlayerStats(iAttacker, S_DMG, iDamage);
+		}
+		
+		AddPlayerStats(iVictim, I_HURT, iDamage);
 	}
 
 	return Plugin_Continue;
@@ -812,24 +797,22 @@ public Action Event_PlayerHurt(Event event, char[] sEventName, bool bDontBroadca
 
 /**
  * Fragment
- * 
- * @noreturn
  */
 void InitCvars()
 {
-	g_hGameMode = FindConVar("mp_gamemode");
-	g_hGameMode.AddChangeHook(OnGamemodeChanged);
+	(g_cvGameMode = FindConVar("mp_gamemode")).AddChangeHook(OnGamemodeChanged);
 
-	g_hSurvivorLimit = FindConVar("survivor_limit");
-	g_hSurvivorLimit.AddChangeHook(OnSurvivorLimitChanged);
-	g_iSurvivorLimit = g_hSurvivorLimit.IntValue;
+	g_cvSurvivorLimit = FindConVar("survivor_limit");
+	g_cvMaxLastVisit = CreateConVar("vs_max_last_visit", "2592000", "The maximum time since the last visit that a record will be found in the database");
+	g_cvMinRankedHours = CreateConVar("vs_min_ranked_hours", "12.0", "Minimum number of hours to display player statistics");
 
-	g_hMaxLastVisit = CreateConVar("vs_max_last_visit", "2592000", "The maximum time since the last visit that a record will be found in the database", FCVAR_NOTIFY);
-	g_iMaxLastVisit = g_hMaxLastVisit.IntValue;
-
-	g_hMinRankedHours = CreateConVar("vs_min_ranked_hours", "3.0", "Minimum number of hours to display player statistics", FCVAR_NOTIFY);
-	g_hMinRankedHours.AddChangeHook(OnMinRankedHoursChanged);
-	g_fMinRankedHours = g_hMinRankedHours.FloatValue;
+	g_cvSurvivorKillCost = CreateConVar("vs_s_kill_cost", "1.0"),
+	g_cvSurvivorKillCICost = CreateConVar("vs_s_kill_ci_cost", "0.02"),
+	g_cvSurvivorDeathCost = CreateConVar("vs_s_death_cost", "4.0"),
+	g_cvSurvivorIncapacitatedCost = CreateConVar("vs_s_incapacitated_cost", "2.0"),
+	g_cvSurvivorTeamkillCost = CreateConVar("vs_s_teamkill_cost", "16.0"),
+	g_cvInfectedIncapacitateCost = CreateConVar("vs_i_incapacitate_cost", "2.0"),
+	g_cvInfectedKillCost = CreateConVar("vs_i_kill_cost", "1.0");
 }
 
 /**
@@ -841,84 +824,170 @@ void InitCvars()
  * @noreturn
  */
 public void OnGamemodeChanged(ConVar convar, const char[] sOldGameMode, const char[] sNewGameMode) {
-	CheckGameMode(sNewGameMode);
-}
-
-/**
- * @param hConVar      Handle to the convar that was changed
- * @param sOldLimit    String containing the value of the convar before it was changed
- * @param sNewLimit    String containing the new value of the convar
- * @noreturn
- */
-public void OnSurvivorLimitChanged(ConVar hConVar, const char[] sOldLimit, const char[] sNewLimit) {
-	g_iSurvivorLimit = hConVar.IntValue;
-}
-
-/**
- * @param hConVar      Handle to the convar that was changed
- * @param sOldLimit    String containing the value of the convar before it was changed
- * @param sNewLimit    String containing the new value of the convar
- * @noreturn
- */
-public void OnMinRankedHoursChanged(ConVar hConVar, const char[] sOldValue, const char[] sNewValue) {
-	g_fMinRankedHours = hConVar.FloatValue;
+	g_bGamemodeAvailable = IsVersusMode(sNewGameMode);
 }
 
 /**
  * Called when the map has loaded, servercfgfile (server.cfg) has been executed, and all plugin configs are done executing.
  * This will always be called once and only once per map. It will be called after OnMapStart().
- * 
- * @noreturn
 */
 public void OnConfigsExecuted() 
 {
 	char sGameMode[16];
-	GetConVarString(g_hGameMode, sGameMode, sizeof(sGameMode));
-	CheckGameMode(sGameMode);
+	GetConVarString(g_cvGameMode, sGameMode, sizeof(sGameMode));
+	g_bGamemodeAvailable = IsVersusMode(sGameMode);
 }
 
 /**
- * Fragment.
- * 
- * @noreturn
- */
-void CheckGameMode(const char[] sGameMode)
-{
-	if (!StrEqual(sGameMode, "versus", false) && !StrEqual(sGameMode, "mutation12", false)) {
-		g_bGamemodeAvailable = true;
-	}
-
-	else {
-		g_bGamemodeAvailable = false;
-	}
-}
-
-/**
- * Fragment.
- * 
- * @noreturn
+ * Database preparation.
  */
 void InitDatabase()
 {
 	Database db = ConnectDatabase();
 
-	if (CheckDatabaseDriver(db) == false) {
+	if (!AvailableDatabaseDriver(db)) {
 		SetFailState("Unsupported database driver.");
 	}
 
 	if (CreateTable(db) == false) {
 		SetFailState("Create tables failure.");
+	} else {
+		ClearTable(db);
 	}
-
-	ClearDatabase(db);
 
 	delete db;
 }
 
 /**
+ * Establishing a database connection.
+ */
+Database ConnectDatabase()
+{
+	char error[255];
+	Database db;
+	
+	if (SQL_CheckConfig(DATABASE)) {
+		db = SQL_Connect(DATABASE, true, error, sizeof(error));
+	} else {
+		SetFailState("Configuration " ... DATABASE ... " not found in databases.cfg.");
+	}
+
+	if (db == null) {
+		LogError("Could not connect to database: %s", error);
+	}
+	
+	return db;
+}
+
+/**
+ * Checking the database driver.
+ */
+bool AvailableDatabaseDriver(Database db) 
+{
+	char ident[16]; db.Driver.GetIdentifier(ident, sizeof(ident));
+
+	if (StrEqual(ident, "mysql", false)) {
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * Creating a table of players.
+ */
+bool CreateTable(Database db)
+{
+	char sStats[CREATE_CODE_LENGTH];
+	char sStatsList[CODE_STATS_SIZE * CREATE_CODE_LENGTH];
+
+	char sQuery[300 + sizeof(sStatsList)] = 
+	"CREATE TABLE IF NOT EXISTS vs_players (\
+	id int(10) UNSIGNED NOT NULL auto_increment,\
+	last_name varchar(65) NOT NULL,\
+	steam_id varchar(32) NOT NULL,\
+	played_time int(10) UNSIGNED NOT NULL,\
+	last_visit int(10) UNSIGNED NOT NULL,\
+	rating float(10,3) UNSIGNED NOT NULL,\
+	__STATS__ PRIMARY KEY (id));";
+
+	for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++) 
+	{
+		Format(sStats, sizeof(sStats), CREATE_CODE, iCode);
+		StrCat(sStatsList, sizeof(sStatsList), sStats);
+	}
+
+	ReplaceString(sQuery, sizeof(sQuery), "__STATS__", sStatsList, false);
+
+	SQL_LockDatabase(db);
+
+	if (!SQL_FastQuery(db, sQuery))
+	{
+		SQL_UnlockDatabase(db);
+		return false;
+	}
+
+	SQL_UnlockDatabase(db);
+
+	return true;
+}
+
+/**
+ * Removing inactive players from the table.
+ */
+void ClearTable(Database db)
+{
+	char sQuery[128];
+	Format(sQuery, sizeof(sQuery), "DELETE FROM vs_players WHERE `last_visit`<%d;", (GetTime() - MAX_LAST_VISIT));
+
+	SQL_LockDatabase(db);
+
+	if (!SQL_FastQuery(db, sQuery))
+	{
+		char sError[255];
+		SQL_GetError(db, sError, sizeof(sError));
+		LogError("Failed to query: %s", sError);
+	}
+
+	SQL_UnlockDatabase(db);
+}
+
+/**
+ * Initializing a weapon map whose key is the name of the weapon and whose 
+ * value is weapon_id.
+ */
+void InitWeaponNameTrie()
+{
+	g_tWeaponNames = CreateTrie();
+
+	SetTrieValue(g_tWeaponNames, "pistol", WID_PISTOL);
+	SetTrieValue(g_tWeaponNames, "smg", WID_SMG);
+	SetTrieValue(g_tWeaponNames, "pumpshotgun", WID_PUMP);
+	SetTrieValue(g_tWeaponNames, "autoshotgun", WID_AUTO);
+	SetTrieValue(g_tWeaponNames, "rifle", WID_M16);
+	SetTrieValue(g_tWeaponNames, "hunting_rifle", WID_HUNTING);
+	SetTrieValue(g_tWeaponNames, "smg_silenced", WID_SILENCED);
+	SetTrieValue(g_tWeaponNames, "shotgun_chrome", WID_CHROME);
+	SetTrieValue(g_tWeaponNames, "rifle_desert", WID_DESERT);
+	SetTrieValue(g_tWeaponNames, "sniper_military", WID_MILITARY);
+	SetTrieValue(g_tWeaponNames, "shotgun_spas", WID_SPAS);
+	SetTrieValue(g_tWeaponNames, "molotov", WID_MOLOTOV);
+	SetTrieValue(g_tWeaponNames, "pipe_bomb", WID_PIPE);
+	SetTrieValue(g_tWeaponNames, "melee", WID_MELEE);
+	SetTrieValue(g_tWeaponNames, "chainsaw", WID_SAW);
+	SetTrieValue(g_tWeaponNames, "grenade_launcher", WID_GL);
+	SetTrieValue(g_tWeaponNames, "rifle_ak47", WID_AK47);
+	SetTrieValue(g_tWeaponNames, "pistol_magnum", WID_MAGNUM);
+	SetTrieValue(g_tWeaponNames, "smg_mp5", WID_MP5);
+	SetTrieValue(g_tWeaponNames, "rifle_sg552", WID_SG552);
+	SetTrieValue(g_tWeaponNames, "sniper_awp", WID_AWP);
+	SetTrieValue(g_tWeaponNames, "sniper_scout", WID_SCOUT);
+	SetTrieValue(g_tWeaponNames, "rifle_m60", WID_M60);
+}
+
+/**
+ * Loading Player Statistics.
  * Called once a client is authorized and fully in-game, and after all post-connection authorizations have been performed.
- * 
- * @noreturn
 */
 public void OnClientPostAdminCheck(int iClient) 
 {
@@ -930,10 +999,8 @@ public void OnClientPostAdminCheck(int iClient)
 }
 
 /**
+ * Saving player statistics.
  * Called before client disconnected.
- * 
- * @param iClient     Client index
- * @noreturn
  */
 public void OnClientDisconnect(int iClient)
 {
@@ -946,9 +1013,11 @@ public void OnClientDisconnect(int iClient)
 
 void BreakPlayedTime(int iClient, int iBreakTime)
 {
-	if (g_iPlayedTimeStartAt[iClient] > 0)
+	int iTimeStartAt = g_iPlayedTimeStartAt[iClient];
+
+	if (iTimeStartAt > 0)
 	{
-		g_pPlayers[iClient].AddPlayedTime(iBreakTime - g_iPlayedTimeStartAt[iClient]);
+		AddPlayerPlayedTime(iClient, iBreakTime - iTimeStartAt);
 		g_iPlayedTimeStartAt[iClient] = 0;
 	}
 }
@@ -982,149 +1051,86 @@ void StopPlayedTime()
 }
 
 bool CanRecordStats() {
-	return g_bGamemodeAvailable && g_bRoundIsLive && g_bFullTeam;
+	return g_bRoundIsLive && g_bFullTeam && g_bGamemodeAvailable;
 }
 
-bool CheckDatabaseDriver(Database db) 
-{
-	char ident[16];
-	db.Driver.GetIdentifier(ident, sizeof(ident));
-
-	if (StrEqual(ident, "mysql", false)) {
-		return true;
-	}
-
-	return false;
-}
-
-bool CreateTable(Database db)
-{
-	char sStats[CREATE_CODE_STATS_TEMP_SIZE];
-	char sStatsList[CODE_STATS_SIZE * CREATE_CODE_STATS_TEMP_SIZE];
-
-	char sQuery[300 + sizeof(sStatsList)] = 
-	"CREATE TABLE IF NOT EXISTS vs_players (\
-	id int(10) UNSIGNED NOT NULL auto_increment,\
-	last_name varchar(65) NOT NULL,\
-	steam_id varchar(32) NOT NULL,\
-	played_time int(10) UNSIGNED NOT NULL,\
-	last_visit int(10) UNSIGNED NOT NULL,\
-	rating float(10,3) UNSIGNED NOT NULL,\
-	__STATS__ PRIMARY KEY (id));";
-
-	for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++) 
-	{
-		Format(sStats, sizeof(sStats), CREATE_CODE_STATS_TEMP, iCode);
-		StrCat(sStatsList, sizeof(sStatsList), sStats);
-	}
-
-	ReplaceString(sQuery, sizeof(sQuery), "__STATS__", sStatsList, false);
-
-	SQL_LockDatabase(db);
-
-	if (!SQL_FastQuery(db, sQuery))
-	{
-		SQL_UnlockDatabase(db);
-		return false;
-	}
-
-	SQL_UnlockDatabase(db);
-
-	return true;
-}
-
-void ClearDatabase(Database db)
-{
-	char sQuery[128];
-	Format(sQuery, sizeof(sQuery), "DELETE FROM vs_players WHERE `last_visit`<%d;", (GetTime() - g_iMaxLastVisit));
-
-	SQL_LockDatabase(db);
-
-	if (!SQL_FastQuery(db, sQuery))
-	{
-		char sError[255];
-		SQL_GetError(db, sError, sizeof(sError));
-		LogError("Failed to query: %s", sError);
-	}
-
-	SQL_UnlockDatabase(db);
-}
-
+/**
+ * Loading all player statistics.
+ */
 void LoadPlayerData(int iClient) 
 {
-	char sSteamId[32];
-	GetClientAuthId(iClient, AuthId_SteamID64, sSteamId, sizeof(sSteamId));
+	Database db = ConnectDatabase();
+
+	char sSteamId[MAX_AUTHID_LENGTH]; GetClientAuthId(iClient, AuthId_SteamID64, sSteamId, sizeof(sSteamId));
+	char sClientName[MAX_NAME_LENGTH]; GetClientName(iClient, sClientName, sizeof(sClientName));
+	SQL_EscapeString(db, sClientName, g_tPlayers[iClient].lastName,  sizeof(g_tPlayers[].lastName));
 
 	char sQuery[256];
 	Format(sQuery, sizeof(sQuery), "SELECT (SELECT count(1) FROM vs_players b WHERE  b.`rating` > a.`rating`)+1 as rank, a.* FROM vs_players a WHERE `steam_id`='%s' LIMIT 1;", sSteamId);
 
-	Database db = ConnectDatabase();
-
-	char sClientName[32];
-	GetClientName(iClient, sClientName, sizeof(sClientName));
-	SQL_EscapeString(db, sClientName, g_pPlayers[iClient].lastName,  sizeof(g_pPlayers[].lastName));
-
 	SQL_TQuery(db, LoadPlayerThread, sQuery, iClient);
 }
 
-void LoadPlayerThread(Handle owner, Handle hndl, const char[] error, int iClient)
+void LoadPlayerThread(Handle owner, Handle hndl, const char[] sError, int iClient)
 {
 	if (hndl == null)
 	{
-		LogError("LoadPlayerThread failed! Reason: %s", error);
+		LogError("LoadPlayerThread failed! Reason: %s", sError);
 		return;
 	}
 
-	if (SQL_GetRowCount(hndl) > 0)
+	if (SQL_GetRowCount(hndl) > 0 && SQL_FetchRow(hndl))
 	{
-		SQL_FetchRow(hndl);
-	
 		int iColumnNum;
 
 		if (SQL_FieldNameToNum(hndl, "id", iColumnNum)) {
-			g_pPlayers[iClient].id = SQL_FetchInt(hndl, iColumnNum);
+			g_tPlayers[iClient].id = SQL_FetchInt(hndl, iColumnNum);
 		}
 
 		if (SQL_FieldNameToNum(hndl, "played_time", iColumnNum)) 
 		{
-			g_pPlayers[iClient].playedTime = SQL_FetchInt(hndl, iColumnNum);
+			g_tPlayers[iClient].playedTime = SQL_FetchInt(hndl, iColumnNum);
 
-			if (g_pPlayers[iClient].playedTime > RoundFloat(HOUR * g_fMinRankedHours) && SQL_FieldNameToNum(hndl, "rank", iColumnNum)) {
-				g_pPlayers[iClient].rank = SQL_FetchInt(hndl, iColumnNum); 
+			if (g_tPlayers[iClient].playedTime > MIN_RANKED_SEC && SQL_FieldNameToNum(hndl, "rank", iColumnNum)) {
+				g_tPlayers[iClient].rank = SQL_FetchInt(hndl, iColumnNum); 
 			}
 		}
 
-		if (SQL_FieldNameToNum(hndl, "code_stats_0", iColumnNum)) 
+		if (SQL_FieldNameToNum(hndl, CODE_ZERO, iColumnNum)) 
 		{
 			for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++)
 			{
-				g_pPlayers[iClient].stats[iCode] = SQL_FetchInt(hndl, iColumnNum + iCode);
+				g_tPlayers[iClient].stats[iCode] = SQL_FetchInt(hndl, iColumnNum + iCode);
 			}
 		}
 	}
 
-	g_pPlayers[iClient].STATE = STATE_LOADED;
+	g_tPlayers[iClient].state = STATE_LOADED;
 }
 
+/**
+ * Save or update all player statistics.
+ */
 void SavePlayerData(int iClient) 
 {
-	if (g_pPlayers[iClient].STATE != STATE_LOADED || g_pPlayers[iClient].playedTime == 0) {
+	if (g_tPlayers[iClient].state != STATE_LOADED || g_tPlayers[iClient].playedTime == 0) {
 		return;
 	}
 
-	PreparationAvg(g_pPlayers[iClient]);
+	PreparePlayerStatsAvg(iClient);
 
-	if (g_pPlayers[iClient].IsNew() == false)
+	if (!IsNewPlayer(iClient))
 	{
-		char sStats[UPDATE_CODE_STATS_TEMP_SIZE];
-		char sStatsList[CODE_STATS_SIZE * UPDATE_CODE_STATS_TEMP_SIZE];
+		// Build Update query
+		char sStats[UPDATE_CODE_LENGTH];
+		char sStatsList[CODE_STATS_SIZE * UPDATE_CODE_LENGTH];
 
-		char sQuery[256 + sizeof(sStatsList)];
-		Format(sQuery, sizeof(sQuery), "UPDATE `vs_players` SET `last_name`='%s',`played_time`=%d,`last_visit`=%d,__STATS__`rating`=%f WHERE `id`=%d;", g_pPlayers[iClient].lastName, g_pPlayers[iClient].playedTime, GetTime(), CalculateRating(g_pPlayers[iClient]), g_pPlayers[iClient].id);
+		char sQuery[384 + sizeof(sStatsList)];
+		Format(sQuery, sizeof(sQuery), "UPDATE `vs_players` SET `last_name`='%s',`played_time`=%d,`last_visit`=%d,__STATS__`rating`=%f WHERE `id`=%d;", g_tPlayers[iClient].lastName, g_tPlayers[iClient].playedTime, GetTime(), CalculatePlayerRating(iClient), g_tPlayers[iClient].id);
 
 		for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++)
 		{
-			Format(sStats, sizeof(sStats), UPDATE_CODE_STATS_TEMP, iCode, g_pPlayers[iClient].stats[iCode]);
+			Format(sStats, sizeof(sStats), UPDATE_CODE, iCode, g_tPlayers[iClient].stats[iCode]);
 			StrCat(sStatsList, sizeof(sStatsList), sStats);
 		}
 
@@ -1134,24 +1140,24 @@ void SavePlayerData(int iClient)
 
 	else
 	{
-		char sSteamId[32];
-		GetClientAuthId(iClient, AuthId_SteamID64, sSteamId, sizeof(sSteamId));
+		char sSteamId[MAX_AUTHID_LENGTH]; GetClientAuthId(iClient, AuthId_SteamID64, sSteamId, sizeof(sSteamId));
 
-		char sStatsColumn[CODE_STATS_SIZE * INSERT_CODE_STATS_COLUMN_TEMP_SIZE];
-		char sStatsColumnList[CODE_STATS_SIZE * INSERT_CODE_STATS_COLUMN_TEMP_SIZE];
+		// Build Insert query
+		char sStatsColumn[CODE_STATS_SIZE * INSERT_CODE_COLUMN_LENGTH];
+		char sStatsColumnList[CODE_STATS_SIZE * INSERT_CODE_COLUMN_LENGTH];
 
-		char sStatsValue[INSERT_CODE_STATS_VALUE_TEMP_SIZE];
-		char sStatsValueList[CODE_STATS_SIZE * INSERT_CODE_STATS_VALUE_TEMP_SIZE];
+		char sStatsValue[INSERT_CODE_VALUE_LENGTH];
+		char sStatsValueList[CODE_STATS_SIZE * INSERT_CODE_VALUE_LENGTH];
  
-		char sQuery[192 + sizeof(sStatsColumnList) + sizeof(sStatsValueList)];
-		Format(sQuery, sizeof(sQuery), "INSERT INTO `vs_players` (`last_name`,`steam_id`,`played_time`,`last_visit`,__STATS_COLUMN__`rating`) VALUES ('%s','%s',%d,%d,__STATS_VALUE__%f);", g_pPlayers[iClient].lastName, sSteamId, g_pPlayers[iClient].playedTime, GetTime(), CalculateRating(g_pPlayers[iClient]));
+		char sQuery[256 + sizeof(sStatsColumnList) + sizeof(sStatsValueList)];
+		Format(sQuery, sizeof(sQuery), "INSERT INTO `vs_players` (`last_name`,`steam_id`,`played_time`,`last_visit`,__STATS_COLUMN__`rating`) VALUES ('%s','%s',%d,%d,__STATS_VALUE__%f);", g_tPlayers[iClient].lastName, sSteamId, g_tPlayers[iClient].playedTime, GetTime(), CalculatePlayerRating(iClient));
 
 		for (int iCode = 0; iCode < CODE_STATS_SIZE; iCode ++) 
 		{
-			Format(sStatsColumn, sizeof(sStatsColumn), INSERT_CODE_STATS_COLUMN_TEMP, iCode);
+			Format(sStatsColumn, sizeof(sStatsColumn), INSERT_CODE_COLUMN, iCode);
 			StrCat(sStatsColumnList, sizeof(sStatsColumnList), sStatsColumn);
 
-			Format(sStatsValue, sizeof(sStatsValue), INSERT_CODE_STATS_VALUE_TEMP, g_pPlayers[iClient].stats[iCode]);
+			Format(sStatsValue, sizeof(sStatsValue), INSERT_CODE_VALUE, g_tPlayers[iClient].stats[iCode]);
 			StrCat(sStatsValueList, sizeof(sStatsValueList), sStatsValue);
 		}
 
@@ -1162,27 +1168,47 @@ void SavePlayerData(int iClient)
 	}
 }
 
-void SavePlayerThread(Handle owner, Handle hndl, const char[] error, int iClient)
+void SavePlayerThread(Handle owner, Handle hndl, const char[] sError, int iClient)
 {
 	if (hndl == null)
 	{
-		LogError("SavePlayerThread failed! Reason: %s", error);
+		LogError("SavePlayerThread failed! Reason: %s", sError);
 		return;
 	}
 
-	if (g_pPlayers[iClient].IsNew()) {
-		g_pPlayers[iClient].id = SQL_GetInsertId(hndl);
+	if (IsNewPlayer(iClient)) {
+		g_tPlayers[iClient].id = SQL_GetInsertId(hndl);
 	}
 }
 
+/**
+ * Reset all player statistics.
+ */
+void ClearPlayerData(int iClient) 
+{
+	g_tPlayers[iClient].id = 0;
+	g_tPlayers[iClient].lastName[0] = '\0';
+	g_tPlayers[iClient].playedTime = 0;
+	g_tPlayers[iClient].rank = 0;
+	g_tPlayers[iClient].state = STATE_LOADING;
+
+	for (int iCodeStats = 0; iCodeStats < CODE_STATS_SIZE; iCodeStats ++)
+	{
+		g_tPlayers[iClient].stats[iCodeStats] = 0;
+	}
+}
+
+/**
+ * Update a player's rating, given that other players have played with this player.
+ */
 void UpdatePlayerRank(int iClient) 
 {
-	if (g_pPlayers[iClient].STATE != STATE_LOADED || g_pPlayers[iClient].IsNew() || g_pPlayers[iClient].playedTime < RoundFloat(HOUR * g_fMinRankedHours)) {
+	if (g_tPlayers[iClient].state != STATE_LOADED || IsNewPlayer(iClient) || g_tPlayers[iClient].playedTime < MIN_RANKED_SEC) {
 		return;
 	}
 
 	char sQuery[192];
-	Format(sQuery, sizeof(sQuery), "SELECT (SELECT count(1) FROM vs_players b WHERE b.`rating`>a.`rating`)+1 as rank FROM vs_players a WHERE `id`=%d LIMIT 1;", g_pPlayers[iClient].id);
+	Format(sQuery, sizeof(sQuery), "SELECT (SELECT count(1) FROM vs_players b WHERE b.`rating`>a.`rating`)+1 as rank FROM vs_players a WHERE `id`=%d LIMIT 1;", g_tPlayers[iClient].id);
 
 	Database db = ConnectDatabase();
 
@@ -1197,198 +1223,186 @@ void UpdatePlayerRankThread(Handle owner, Handle hndl, const char[] error, int i
 		return;
 	}
 
-	if (SQL_GetRowCount(hndl) > 0)
-	{
-		SQL_FetchRow(hndl);
-
-		g_pPlayers[iClient].rank = SQL_FetchInt(hndl, 0);
+	if (SQL_GetRowCount(hndl) > 0 && SQL_FetchRow(hndl)) {
+		g_tPlayers[iClient].rank = SQL_FetchInt(hndl, 0);
 	}
 }
 
 
 /**
- * Helper.
+ * Adds a kill to the player's statistics, taking into account the weapon id.
  */
 void AddWeaponKill(int iClient, int iWeaponId)
 {
 	if (iWeaponId != WID_MELEE) {
-		g_pPlayers[iClient].AddStats(GetKillCodeByWeaponId(iWeaponId), 1);
+		AddPlayerStats(iClient, GetKillCodeByWeaponId(iWeaponId), 1);
 	}
-	
+
 	else
 	{
-		char sMeleeName[32];
-		int entity = GetPlayerWeaponSlot(iClient, 1);
-		GetEntPropString(entity, Prop_Data, "m_strMapSetScriptName", sMeleeName, sizeof(sMeleeName));
-
-		g_pPlayers[iClient].AddStats(GetKillCodeByMeleeName(sMeleeName), 1);
+		char sMeleeName[32]; GetClientMeleeName(iClient, sMeleeName, sizeof(sMeleeName));
+		AddPlayerStats(iClient, GetKillCodeByMeleeName(sMeleeName), 1);
 	}
 }
 
 /**
  * Player Pts Calculation.
  */
-float CalculateRating(Player pTargetPlayer) 
+float CalculatePlayerRating(int iClient) 
 {
-	float fPlayedHours = SecToHours(pTargetPlayer.playedTime + 1);
+	float fPlayedHours = SecToHours(g_tPlayers[iClient].playedTime);
 
-	if (fPlayedHours < g_fMinRankedHours) {
+	if (fPlayedHours < MIN_RANKED_HOURS) {
 		return 0.0;
 	}
 
-	#define INFECTED_INCAPACITATE_COST  2
-	#define INFECTED_KILL_COST          6
-	#define SURVIVOR_DEATH_COST         4
-	#define SURVIVOR_INCAPACITATED_COST 2
-	#define SURVIVOR_TEAMKILL_COST      16
+	float fPositive = float(g_tPlayers[iClient].stats[S_K_CI]) * COST_S_KILL_CI
+					+ float(g_tPlayers[iClient].stats[S_KILL]) * COST_S_KILL
+					+ float(g_tPlayers[iClient].stats[I_INCAPACITATE]) * COST_I_INCAPACITATE
+					+ float(g_tPlayers[iClient].stats[I_KILL]) * COST_I_KILL;
 
-	float fPositive = float(pTargetPlayer.stats[SURVIVOR_KILL] + pTargetPlayer.stats[INFECTED_INCAPACITATE] * INFECTED_INCAPACITATE_COST + pTargetPlayer.stats[INFECTED_KILL] * INFECTED_KILL_COST);
-	float fNegative = float(pTargetPlayer.stats[SURVIVOR_DEATH] * 4 + pTargetPlayer.stats[SURVIVOR_INCAPACITATED] * SURVIVOR_INCAPACITATED_COST + pTargetPlayer.stats[SURVIVOR_TEAMKILL] * SURVIVOR_TEAMKILL_COST);
+	float fNegative = float(g_tPlayers[iClient].stats[S_DEATH]) * COST_S_DEATH 
+					+ float(g_tPlayers[iClient].stats[S_INCAPACITATED]) * COST_S_INCAPACITATED 
+					+ float(g_tPlayers[iClient].stats[S_TEAMKILL]) * COST_S_TEAMKILL;
+
 	float fRating = (fPositive - fNegative) / (fPlayedHours);
 
 	return fRating > 0.0 ? fRating : 0.0;
 }
 
-void PreparationAvg(Player pTargetPlayer) 
+/**
+ * Calculating averages of statistics.
+ */
+void PreparePlayerStatsAvg(int iClient) 
 {
-	if (pTargetPlayer.stats[SURVIVOR_MET_TANK] > 0) { // Division by zero
-		pTargetPlayer.stats[SURVIVOR_AVG_DMG_TANK] = pTargetPlayer.stats[SURVIVOR_DMG_TANK] / pTargetPlayer.stats[SURVIVOR_MET_TANK];
+	if (g_tPlayers[iClient].stats[S_MET_TANK] > 0) { 
+		g_tPlayers[iClient].stats[S_AVG_DMG_TANK] = g_tPlayers[iClient].stats[S_DMG_TANK] / g_tPlayers[iClient].stats[S_MET_TANK];
 	}	
 }
 
-void ClearPlayerData(int iClient) 
-{
-	g_pPlayers[iClient].id = 0;
-	g_pPlayers[iClient].lastName[0] = '\0';
-	g_pPlayers[iClient].playedTime = 0;
-	g_pPlayers[iClient].rank = 0;
-	g_pPlayers[iClient].STATE = STATE_LOADING;
+void AddPlayerStats(int iClient, int iCode, int iValue) {
+	g_tPlayers[iClient].stats[iCode] += iValue;
+}
 
-	for (int iCodeStats = 0; iCodeStats < CODE_STATS_SIZE; iCodeStats ++)
-	{
-		g_pPlayers[iClient].stats[iCodeStats] = 0;
-	}
+void AddPlayerPlayedTime(int iClient, int iValue) {
+	g_tPlayers[iClient].playedTime += iValue;
+}
+
+bool IsNewPlayer(int iClient) {
+	return g_tPlayers[iClient].id == 0;
 }
 
 /**
- * Helper.
- */
-float SecToHours(int seconds)
-{
-	return float(seconds) / float(HOUR);
-}
-
-/**
- * Helper.
+ * Returns killcode by weapon id.
  */
 int GetKillCodeByWeaponId(int iWeponId)
 {
 	switch (iWeponId) 
 	{
-		case WID_PISTOL: return SURVIVOR_K_PISTOL;
-		case WID_SMG: return SURVIVOR_K_SMG;
-		case WID_PUMP: return SURVIVOR_K_PUMP;
-		case WID_AUTO: return SURVIVOR_K_AUTO;
-		case WID_M16: return SURVIVOR_K_M16;
-		case WID_HUNTING: return SURVIVOR_K_HUNTING;
-		case WID_SILENCED: return SURVIVOR_K_SILENCED;
-		case WID_CHROME: return SURVIVOR_K_CHROME;
-		case WID_DESERT: return SURVIVOR_K_DESERT;
-		case WID_MILITARY: return SURVIVOR_K_MILITARY;
-		case WID_SPAS: return SURVIVOR_K_SPAS;
-		case WID_MOLOTOV: return SURVIVOR_K_MOLOTOV;
-		case WID_PIPE: return SURVIVOR_K_PIPE;
-		case WID_SAW: return SURVIVOR_K_SAW;
-		case WID_GL: return SURVIVOR_K_GL;
-		case WID_AK47: return SURVIVOR_K_AK47;
-		case WID_MAGNUM: return SURVIVOR_K_MAGNUM;
-		case WID_MP5: return SURVIVOR_K_MP5;
-		case WID_SG552: return SURVIVOR_K_SG552;
-		case WID_AWP: return SURVIVOR_K_AWP;
-		case WID_SCOUT: return SURVIVOR_K_SCOUT;
-		case WID_M60: return SURVIVOR_K_M60;
+		case WID_PISTOL: return S_K_PISTOL;
+		case WID_SMG: return S_K_SMG;
+		case WID_PUMP: return S_K_PUMP;
+		case WID_AUTO: return S_K_AUTO;
+		case WID_M16: return S_K_M16;
+		case WID_HUNTING: return S_K_HUNTING;
+		case WID_SILENCED: return S_K_SILENCED;
+		case WID_CHROME: return S_K_CHROME;
+		case WID_DESERT: return S_K_DESERT;
+		case WID_MILITARY: return S_K_MILITARY;
+		case WID_SPAS: return S_K_SPAS;
+		case WID_MOLOTOV: return S_K_MOLOTOV;
+		case WID_PIPE: return S_K_PIPE;
+		case WID_SAW: return S_K_SAW;
+		case WID_GL: return S_K_GL;
+		case WID_AK47: return S_K_AK47;
+		case WID_MAGNUM: return S_K_MAGNUM;
+		case WID_MP5: return S_K_MP5;
+		case WID_SG552: return S_K_SG552;
+		case WID_AWP: return S_K_AWP;
+		case WID_SCOUT: return S_K_SCOUT;
+		case WID_M60: return S_K_M60;
 	}
 
-	return SURVIVOR_K_NONE;
+	return S_K_NONE;
 }
 
 /**
- * Helper.
+ * Returns killcode by melee name.
  */
 int GetKillCodeByMeleeName(const char[] sMeleeName) 
 {
-	if (sMeleeName[0] == 'k' && sMeleeName[1] == 'a') { // katana
-		return SURVIVOR_K_KATANA;
+	if (sMeleeName[0] == 'k' && sMeleeName[1] == 'a') { /* [ka]tana */
+		return S_K_KATANA;
 	}
 
-	else if (sMeleeName[0] == 'f' && sMeleeName[1] == 'i') { // fireaxe
-		return SURVIVOR_K_AXE;
+	else if (sMeleeName[0] == 'f' && sMeleeName[1] == 'i') { /* [fi]reaxe */
+		return S_K_AXE;
 	}
 	
-	else if (sMeleeName[0] == 'm') { // machete
-		return SURVIVOR_K_MACHATE;
+	else if (sMeleeName[0] == 'm') { /* [m]achete */
+		return S_K_MACHATE;
 	}
 
-	else if (sMeleeName[0] == 'k') { // knife
-		return SURVIVOR_K_KNIFE;
+	else if (sMeleeName[0] == 'k') { /* [k]nife */
+		return S_K_KNIFE;
 	}
 
-	else if (sMeleeName[0] == 'c' && sMeleeName[1] == 'h') { // chainsaw
-		return SURVIVOR_K_SAW;
+	else if (sMeleeName[0] == 'c' && sMeleeName[1] == 'h') { // [ch]ainsaw */
+		return S_K_SAW;
 	}
 	
-	else if (sMeleeName[0] == 'p') { // pitchfork
-		return SURVIVOR_K_PITCHFORK;
+	else if (sMeleeName[0] == 'p') { /* [p]itchfork */
+		return S_K_PITCHFORK;
 	}
 	
-	else if (sMeleeName[0] == 's') { // shovel
-		return SURVIVOR_K_SHOVEL;
+	else if (sMeleeName[0] == 's') { /* [s]hovel */
+		return S_K_SHOVEL;
 	}
 
-	else if (sMeleeName[0] == 'g') { // golfclub
-		return SURVIVOR_K_GOLF;
+	else if (sMeleeName[0] == 'g') { /* [g]olfclub */
+		return S_K_GOLF;
 	}
 
-	else if (sMeleeName[0] == 'e') { // electric_guitar
-		return SURVIVOR_K_GUITAR;
+	else if (sMeleeName[0] == 'e') { /* [e]lectric_guitar */
+		return S_K_GUITAR;
 	}
 
-	else if (sMeleeName[0] == 't') { // tonfa
-		return SURVIVOR_K_TONFA;
+	else if (sMeleeName[0] == 't') { /* [t]onfa */
+		return S_K_TONFA;
 	}
 
-	else if (sMeleeName[0] == 'b') { // baseball_bat
-		return SURVIVOR_K_BASEBALL;
+	else if (sMeleeName[0] == 'b') { /* [b]aseball_bat */
+		return S_K_BASEBALL;
 	}
 
-	else if (sMeleeName[0] == 'c' && sMeleeName[2] == 'i') { // cricket_bat
-		return SURVIVOR_K_CRICKET;
+	else if (sMeleeName[0] == 'c' && sMeleeName[2] == 'i') { // [c]r[i]cket_bat */
+		return S_K_CRICKET;
 	}
 
-	else if (sMeleeName[0] == 'f') { // frying_pan
-		return SURVIVOR_K_PAN;
+	else if (sMeleeName[0] == 'f') { /* [f]rying_pan */
+		return S_K_PAN;
 	}
 
-	else if (sMeleeName[0] == 'c') { // crowbar
-		return SURVIVOR_K_CROWBAR;
+	else if (sMeleeName[0] == 'c') { /* [c]rowbar */
+		return S_K_CROWBAR;
 	}
 
-	return SURVIVOR_K_NONE;
+	return S_K_NONE;
 }
 
 /**
- * Helper.
+ * Returns killcode by zombie class.
  */
 int GetKillCodeByZombieClass(int iZombieClass) 
 {
 	switch(iZombieClass)
 	{
-		case ZC_SMOKER: return SURVIVOR_K_SMOKER;
-		case ZC_BOOMER: return SURVIVOR_K_BOOMER;
-		case ZC_HUNTER: return SURVIVOR_K_HUNTER;
-		case ZC_SPITTER: return SURVIVOR_K_SPITTER;
-		case ZC_JOCKEY: return SURVIVOR_K_JOCKEY;
-		case ZC_CHARGER: return SURVIVOR_K_CHARGER;
+		case ZC_SMOKER: return S_K_SMOKER;
+		case ZC_BOOMER: return S_K_BOOMER;
+		case ZC_HUNTER: return S_K_HUNTER;
+		case ZC_SPITTER: return S_K_SPITTER;
+		case ZC_JOCKEY: return S_K_JOCKEY;
+		case ZC_CHARGER: return S_K_CHARGER;
 	}
 
 	return -1;
@@ -1411,4 +1425,45 @@ int GetPlayerCount()
 	}
 
 	return iCount;
+}
+
+/**
+ * Getting the player's current zombie class.
+ *
+ * @param iClient       Client index
+ *
+ * @return              Returns the code of the zombie class
+ */
+int GetClientZombieClass(int iClient) {
+	return GetEntProp(iClient, Prop_Send, "m_zombieClass");
+}
+
+void GetClientMeleeName(int iClient, char[] sMeleeName, int iLen)
+{
+	GetEntPropString(
+		GetPlayerWeaponSlot(iClient, 1), 
+		Prop_Data, 
+		"m_strMapSetScriptName", 
+		sMeleeName, 
+		iLen
+	);
+}
+
+/**
+ * Is the game mode versus.
+ *
+ * @param sGameMode     A string containing the name of the game mode
+ *
+ * @return              Returns true if verus, otherwise false
+ */
+bool IsVersusMode(const char[] sGameMode) {
+	return (StrEqual(sGameMode, GAMEMODE_VERSUS, false) || StrEqual(sGameMode, GAMEMODE_VERSUS_REALISM, false));
+}
+
+bool IsIncapacitated(int iClient) {
+	return view_as<bool>(GetEntProp(iClient, Prop_Send, "m_isIncapacitated"));
+}
+
+bool IsTankIncapacitated(int iClient) {
+	return (IsIncapacitated(iClient) || GetClientHealth(iClient) < 1);
 }

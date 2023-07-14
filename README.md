@@ -1,12 +1,6 @@
 # About versus_stats
 This plugin will add statistics of player actions in versus mode.
 
-## ConVars
-| ConVar               | Value         | Description                                                                        |
-| -------------------- | ------------- | ---------------------------------------------------------------------------------- |
-| vs_max_last_visit    | 2592000       | The maximum time since the last visit that a record will be found in the database. |
-| vs_min_ranked_hours  | 12.0          | Minimum number of hours to display player statistics.                              |
-
 ## Install
 Add new connection data to the `databases.cfg` file:
 ```
@@ -22,7 +16,21 @@ Add new connection data to the `databases.cfg` file:
   ...
 ```
 
-## Module vs_rankstats
+## ConVars
+| ConVar               | Value         | Description                                                                        |
+| -------------------- | ------------- | ---------------------------------------------------------------------------------- |
+| vs_max_last_visit    | 2592000       | The maximum time since the last visit that a record will be found in the database. |
+| vs_min_ranked_hours  | 12.0          | Minimum number of hours to display player statistics.                              |
+| vs_s_kill_cost       | 1.0           |                                                                                    |
+| vs_s_kill_ci_cost    | 0.02          |                                                                                    |
+| vs_s_death_cost      | 4.0           |                                                                                    |
+| vs_s_incapacitated_cost| 2.0         |                                                                                    |
+| vs_s_teamkill_cost   | 16.0          |                                                                                    |
+| vs_i_incapacitate_cost | 2.0         |                                                                                    |
+| vs_i_kill_cost       | 1.0           |                                                                                    |
+
+
+## About vs_rankstats
 The plugin adds the ability to view the rank and statistics of the player.
 
 ### Commands
@@ -35,7 +43,7 @@ The plugin adds the ability to view the rank and statistics of the player.
 ### What statistics will be displayed?
 `configs/vs_rankstats.ini` contains the [codestats](https://github.com/TouchMe-Inc/l4d2_versus_stats/blob/main/addons/sourcemod/scripting/include/versus_stats.inc) of all items that will be displayed.
 
-## Module vs_top
+## About vs_top
 The plugin adds the ability to view the best players.
 
 ### Commands

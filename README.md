@@ -1,6 +1,10 @@
 # About versus_stats
 This plugin will add statistics of player actions in versus mode.
 
+All players are ranked according to the level of individual skills.
+
+Web version [here](https://github.com/TouchMe-Inc/web_versus_stats).
+
 ## Install
 Add new connection data to the `databases.cfg` file:
 ```
@@ -21,13 +25,13 @@ Add new connection data to the `databases.cfg` file:
 | -------------------- | ------------- | ---------------------------------------------------------------------------------- |
 | vs_max_last_visit    | 2592000       | The maximum time since the last visit that a record will be found in the database. |
 | vs_min_ranked_hours  | 12.0          | Minimum number of hours to display player statistics.                              |
-| vs_s_kill_cost       | 1.0           |                                                                                    |
-| vs_s_kill_ci_cost    | 0.02          |                                                                                    |
-| vs_s_death_cost      | 4.0           |                                                                                    |
-| vs_s_incapacitated_cost| 2.0         |                                                                                    |
-| vs_s_teamkill_cost   | 16.0          |                                                                                    |
-| vs_i_incapacitate_cost | 2.0         |                                                                                    |
-| vs_i_kill_cost       | 1.0           |                                                                                    |
+| vs_s_kill_cost       | 1.0           | (positive)                                                                         |
+| vs_s_kill_ci_cost    | 0.02          | (positive) Cost of killing common infected                                         |
+| vs_s_death_cost      | 4.0           | (negative) Death cost per survivor team                                            |
+| vs_s_incapacitated_cost| 2.0         | (negative) Cost of incapacitation per team survivors                               |
+| vs_s_teamkill_cost   | 16.0          | (negative) Cost of killing your teammate                                           |
+| vs_i_incapacitate_cost | 2.0         | (positive) Incapacitation cost per Infected team                                   |
+| vs_i_kill_cost       | 1.0           | (positive)                                                                         |
 
 
 ## About vs_rankstats
